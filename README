@@ -1,0 +1,89 @@
+`hid-nintendo` Linux kernel driver with NSO controller support
+==============================================================
+
+This repository contains the source code for the Linux kernel
+`hid-nintendo` input driver, with added support for Nintendo Switch
+Online controllers.
+
+
+Supported controllers
+---------------------
+
+* SNES controller
+  * <https://www.nintendo.com/store/products/super-nintendo-entertainment-system-controller/>
+* NES controller
+  * <https://www.nintendo.com/store/products/nintendo-entertainment-system-controllers/>
+* Sega Genesis control pad (partial Bluetooth support, full USB support)
+  * <https://www.nintendo.com/store/products/sega-genesis-control-pad/>
+
+
+Installation
+------------
+
+This driver can be installed from source on Linux using DKMS. Before
+installation, you should install the Linux kernel headers and DKMS
+support. Next, clone the source code.
+
+    git clone https://github.com/emilyst/hid-nintendo
+    cd hid-nintendo
+
+Then run the following commands as root or using `sudo`.
+
+    dkms add .
+    dkms build hid-nintendo -v 1.0
+    dkms install hid-nintendo -v 1.0
+
+
+Uninstallation
+--------------
+
+To uninstall fully, run the following commands as root or using `sudo`.
+
+    modprobe -r hid_nintendo
+    dkms uninstall -m hid-nintendo -v 1.0
+    dkms remove -m hid-nintendo -v 1.0
+    rm -rf /usr/src/hid-nintendo-*
+
+
+Attribution
+-----------
+
+This driver source code is derived from:
+
+* <https://github.com/DanielOgorchock/linux>
+
+It builds on changes from:
+
+* <https://github.com/nadiaholmquist/linux/tree/hid-nintendo>
+
+For DKMS support, I made reference to:
+
+* <https://github.com/nicman23/dkms-hid-nintendo>
+
+For more background on my NSO support as implemented, see:
+
+* <https://github.com/DanielOgorchock/linux/pull/35>
+
+
+License
+-------
+
+HID driver for Nintendo Switch Joy-Cons and Pro Controllers
+
+Copyright (c) 2019-2021 Daniel J. Ogorchock <djogorchock@gmail.com>
+Portions Copyright (c) 2020 Nadia Holmquist Pedersen <nadia@nhp.sh>
+Copyright (c) 2022 Emily Strickland <linux@emily.st>
+
+This program is free software; you can redistribute it and/or
+modify it under the terms of the GNU General Public License
+as published by the Free Software Foundation; either version 2
+of the License, or (at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program; if not, write to the Free Software
+Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
