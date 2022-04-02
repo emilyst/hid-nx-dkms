@@ -502,15 +502,35 @@ static inline bool nx_ctlr_type_is_procon(struct nx_ctlr *ctlr)
 
 static inline bool nx_ctlr_type_is_joycon(struct nx_ctlr *ctlr)
 {
-	return (ctlr->ctlr_type == NX_CTLR_TYPE_JCL ||
-	   	ctlr->ctlr_type == NX_CTLR_TYPE_JCR ||
-	    	nx_ctlr_type_is_chrggrip(ctlr));
+	return ctlr->ctlr_type == NX_CTLR_TYPE_JCL ||
+	       ctlr->ctlr_type == NX_CTLR_TYPE_JCR ||
+	       nx_ctlr_type_is_chrggrip(ctlr);
+}
+
+static inline bool nx_ctlr_type_is_left_joycon(struct nx_ctlr *ctlr)
+{
+	return ctlr->ctlr_type == NX_CTLR_TYPE_JCL;
+}
+
+static inline bool nx_ctlr_type_is_right_joycon(struct nx_ctlr *ctlr)
+{
+	return ctlr->ctlr_type == NX_CTLR_TYPE_JCR;
 }
 
 static inline bool nx_ctlr_type_is_nescon(struct nx_ctlr *ctlr)
 {
 	return ctlr->ctlr_type == NX_CTLR_TYPE_NESL ||
 	       ctlr->ctlr_type == NX_CTLR_TYPE_NESR;
+}
+
+static inline bool nx_ctlr_type_is_left_nescon(struct nx_ctlr *ctlr)
+{
+	return ctlr->ctlr_type == NX_CTLR_TYPE_NESL;
+}
+
+static inline bool nx_ctlr_type_is_right_nescon(struct nx_ctlr *ctlr)
+{
+	return ctlr->ctlr_type == NX_CTLR_TYPE_NESR;
 }
 
 static inline bool nx_ctlr_type_is_snescon(struct nx_ctlr *ctlr)
@@ -535,7 +555,7 @@ static inline bool nx_ctlr_type_has_right(struct nx_ctlr *ctlr)
 	       ctlr->ctlr_type == NX_CTLR_TYPE_PRO;
 }
 
-static inline bool nx_ctlr_has_usb(struct nx_ctlr *ctlr)
+static inline bool nx_ctlr_uses_usb(struct nx_ctlr *ctlr)
 {
 	return nx_ctlr_type_is_procon(ctlr) ||
 	       nx_ctlr_type_is_chrggrip(ctlr) ||
@@ -543,7 +563,7 @@ static inline bool nx_ctlr_has_usb(struct nx_ctlr *ctlr)
 	       nx_ctlr_type_is_gencon(ctlr);
 }
 
-static inline bool nx_ctlr_has_imu(struct nx_ctlr *ctlr)
+static inline bool nx_ctlr_uses_imu(struct nx_ctlr *ctlr)
 {
 	return nx_ctlr_type_is_joycon(ctlr) || nx_ctlr_type_is_procon(ctlr);
 }
@@ -1230,8 +1250,7 @@ static void nx_ctlr_parse_imu_report(struct nx_ctlr *ctlr,
 		 *   Z: positive is pointing up (out of the buttons/sticks)
 		 * The axes follow the right-hand rule.
 		 */
-		if (nx_ctlr_type_is_joycon(ctlr) &&
-		    nx_ctlr_type_has_right(ctlr)) {
+		if (nx_ctlr_type_is_right_joycon(ctlr)) {
 			int j;
 
 			/* negate all but x axis */
@@ -1447,7 +1466,7 @@ static void nx_ctlr_parse_report(struct nx_ctlr *ctlr,
 	}
 
 	/* parse IMU data if present */
-	if (rep->id == NX_CTLR_INPUT_IMU_DATA && nx_ctlr_has_imu(ctlr))
+	if (rep->id == NX_CTLR_INPUT_IMU_DATA && nx_ctlr_uses_imu(ctlr))
 		nx_ctlr_parse_imu_report(ctlr, rep);
 }
 
@@ -1712,12 +1731,10 @@ static int nx_ctlr_input_create(struct nx_ctlr *ctlr)
 
 	hdev = ctlr->hdev;
 
-	switch (hdev->product) {
-	case USB_DEVICE_ID_NINTENDO_PROCON:
+	if (nx_ctlr_type_is_procon(ctlr)) {
 		name = "Nintendo Switch Pro Controller";
 		imu_name = "Nintendo Switch Pro Controller IMU";
-		break;
-	case USB_DEVICE_ID_NINTENDO_CHRGGRIP:
+	} else if (nx_ctlr_type_is_chrggrip(ctlr)) {
 		if (nx_ctlr_type_has_left(ctlr)) {
 			name = "Nintendo Switch Left Joy-Con (Grip)";
 			imu_name = "Nintendo Switch Left Joy-Con IMU (Grip)";
@@ -1725,33 +1742,26 @@ static int nx_ctlr_input_create(struct nx_ctlr *ctlr)
 			name = "Nintendo Switch Right Joy-Con (Grip)";
 			imu_name = "Nintendo Switch Right Joy-Con IMU (Grip)";
 		}
-		break;
-	case USB_DEVICE_ID_NINTENDO_JOYCONL:
+	} else if (nx_ctlr_type_is_left_joycon(ctlr)) {
 		name = "Nintendo Switch Left Joy-Con";
 		imu_name = "Nintendo Switch Left Joy-Con IMU";
-		break;
-	case USB_DEVICE_ID_NINTENDO_JOYCONR:
-		if (ctlr->ctlr_type == NX_CTLR_TYPE_NESL) {
-			name = "Nintendo Controller for Nintendo Switch Online (L)";
-			imu_name = NULL;
-		} else if (ctlr->ctlr_type == NX_CTLR_TYPE_NESR) {
-			name = "Nintendo Controller for Nintendo Switch Online (R)";
-			imu_name = NULL;
-		} else {
-			name = "Nintendo Switch Right Joy-Con";
-			imu_name = "Nintendo Switch Right Joy-Con IMU";
-		}
-		break;
-	case USB_DEVICE_ID_NINTENDO_SNESCON:
+	} else if (nx_ctlr_type_is_right_joycon(ctlr)) {
+		name = "Nintendo Switch Right Joy-Con";
+		imu_name = "Nintendo Switch Right Joy-Con IMU";
+	} else if (nx_ctlr_type_is_left_nescon(ctlr)) {
+		name = "Nintendo Controller for Nintendo Switch Online (L)";
+		imu_name = NULL;
+	} else if (nx_ctlr_type_is_right_nescon(ctlr)) {
+		name = "Nintendo Controller for Nintendo Switch Online (R)";
+		imu_name = NULL;
+	} else if (nx_ctlr_type_is_snescon(ctlr)) {
 		name = "Super Nintendo Controller for Nintendo Switch Online";
 		imu_name = NULL;
-		break;
-	case USB_DEVICE_ID_NINTENDO_GENCON:
+	} else if (nx_ctlr_type_is_gencon(ctlr)) {
 		name = "SEGA Genesis Control Pad for Nintendo Switch Online";
 		imu_name = NULL;
-		break;
-	default: /* Should be impossible */
-		hid_err(hdev, "Invalid hid product\n");
+	} else {
+		hid_err(hdev, "Invalid device\n");
 		return -EINVAL;
 	}
 
@@ -1785,7 +1795,7 @@ static int nx_ctlr_input_create(struct nx_ctlr *ctlr)
 					     nx_ctlr_button_inputs_l[i]);
 
 		/* configure d-pad differently for joy-con vs pro controller */
-		if (hdev->product != USB_DEVICE_ID_NINTENDO_PROCON) {
+		if (!(nx_ctlr_type_is_procon(ctlr))) {
 			for (i = 0; nx_ctlr_dpad_inputs_jc[i] > 0; i++)
 				input_set_capability(ctlr->input,
 						     EV_KEY,
@@ -1877,10 +1887,10 @@ static int nx_ctlr_input_create(struct nx_ctlr *ctlr)
 	}
 
 	/* Let's report joy-con S triggers separately */
-	if (hdev->product == USB_DEVICE_ID_NINTENDO_JOYCONL) {
+	if (nx_ctlr_type_is_left_joycon(ctlr)) {
 		input_set_capability(ctlr->input, EV_KEY, BTN_TR);
 		input_set_capability(ctlr->input, EV_KEY, BTN_TR2);
-	} else if (hdev->product == USB_DEVICE_ID_NINTENDO_JOYCONR) {
+	} else if (nx_ctlr_type_is_left_joycon(ctlr)) {
 		input_set_capability(ctlr->input, EV_KEY, BTN_TL);
 		input_set_capability(ctlr->input, EV_KEY, BTN_TL2);
 	}
@@ -2370,7 +2380,7 @@ static int nintendo_hid_probe(struct hid_device *hdev,
 	/* Initialize the controller */
 	mutex_lock(&ctlr->output_mutex);
 	/* if handshake command fails, assume ble pro controller */
-	if (nx_ctlr_has_usb(ctlr) &&
+	if (nx_ctlr_uses_usb(ctlr) &&
 	    !nx_ctlr_send_usb(ctlr, NX_CTLR_USB_CMD_HANDSHAKE, HZ)) {
 		hid_dbg(hdev, "detected USB controller\n");
 		if ((ret = nx_ctlr_send_usb(ctlr, NX_CTLR_USB_CMD_BAUDRATE_3M, HZ))) {
