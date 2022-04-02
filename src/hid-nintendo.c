@@ -1432,20 +1432,31 @@ static void nx_ctlr_parse_report(struct nx_ctlr *ctlr,
 		input_report_abs(dev, ABS_HAT0X, x);
 		input_report_abs(dev, ABS_HAT0Y, y);
 
-		input_report_key(dev, BTN_EAST, btns & NX_CTLR_BTN_A);
-		input_report_key(dev, BTN_SOUTH, btns & NX_CTLR_BTN_B);
-		input_report_key(dev, BTN_SELECT, btns & NX_CTLR_BTN_MINUS);
-		input_report_key(dev, BTN_START, btns & NX_CTLR_BTN_PLUS);
+		if (nx_ctlr_type_is_nescon(ctlr)) {
+			input_report_key(dev, BTN_SELECT, btns & NX_CTLR_BTN_MINUS);
+			input_report_key(dev, BTN_START, btns & NX_CTLR_BTN_PLUS);
+			input_report_key(dev, BTN_EAST, btns & NX_CTLR_BTN_B);
+			input_report_key(dev, BTN_SOUTH, btns & NX_CTLR_BTN_A);
+			input_report_key(dev, BTN_TL, btns & NX_CTLR_BTN_L);
+			input_report_key(dev, BTN_TR, btns & NX_CTLR_BTN_R);
+		} else if (nx_ctlr_type_is_snescon(ctlr)) {
+			input_report_key(dev, BTN_SELECT, btns & NX_CTLR_BTN_MINUS);
+			input_report_key(dev, BTN_START, btns & NX_CTLR_BTN_PLUS);
 
-		if (nx_ctlr_type_is_snescon(ctlr)) {
+			/* these two are mixed up for some reason */
+			input_report_key(dev, BTN_EAST, btns & NX_CTLR_BTN_B);
+			input_report_key(dev, BTN_SOUTH, btns & NX_CTLR_BTN_A);
+
+			input_report_key(dev, BTN_NORTH, btns & NX_CTLR_BTN_X);
+			input_report_key(dev, BTN_WEST, btns & NX_CTLR_BTN_Y);
 			input_report_key(dev, BTN_TL, btns & NX_CTLR_BTN_L);
 			input_report_key(dev, BTN_TR, btns & NX_CTLR_BTN_R);
 			input_report_key(dev, BTN_TL2, btns & NX_CTLR_BTN_ZL);
 			input_report_key(dev, BTN_TR2, btns & NX_CTLR_BTN_ZR);
-			input_report_key(dev, BTN_NORTH, btns & NX_CTLR_BTN_X);
-			input_report_key(dev, BTN_WEST, btns & NX_CTLR_BTN_Y);
-		}
-		if (nx_ctlr_type_is_gencon(ctlr)) {
+		} else if (nx_ctlr_type_is_gencon(ctlr)) {
+			input_report_key(dev, BTN_START, btns & NX_CTLR_BTN_PLUS);
+			input_report_key(dev, BTN_EAST, btns & NX_CTLR_BTN_B);
+			input_report_key(dev, BTN_SOUTH, btns & NX_CTLR_BTN_A);
 			input_report_key(dev, BTN_C, btns & NX_CTLR_BTN_R);
 			input_report_key(dev, BTN_MODE, btns & NX_CTLR_BTN_ZR);
 		}
