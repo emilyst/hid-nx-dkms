@@ -1726,6 +1726,7 @@ static int joycon_input_create(struct joycon_ctlr *ctlr)
 			name = "Nintendo Switch Right Joy-Con";
 			imu_name = "Nintendo Switch Right Joy-Con IMU";
 		}
+		break;
 	case USB_DEVICE_ID_NINTENDO_SNESCON:
 		name = "Super Nintendo Controller for Nintendo Switch Online";
 		imu_name = NULL;
