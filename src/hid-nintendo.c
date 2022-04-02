@@ -489,44 +489,63 @@ struct joycon_ctlr {
 	unsigned int imu_avg_delta_ms;
 };
 
-/* Helper macros for checking controller type */
-#define jc_type_is_joycon(ctlr) \
-	((ctlr->hdev->product == USB_DEVICE_ID_NINTENDO_JOYCONL || \
-	  ctlr->hdev->product == USB_DEVICE_ID_NINTENDO_JOYCONR || \
-	  ctlr->hdev->product == USB_DEVICE_ID_NINTENDO_CHRGGRIP) && \
-	 !jc_type_is_nescon(ctlr))
-#define jc_type_is_procon(ctlr) \
-	(ctlr->hdev->product == USB_DEVICE_ID_NINTENDO_PROCON)
-#define jc_type_is_chrggrip(ctlr) \
-	(ctlr->hdev->product == USB_DEVICE_ID_NINTENDO_CHRGGRIP)
-#define jc_type_is_nescon(ctlr) \
-	(ctlr->hdev->product == USB_DEVICE_ID_NINTENDO_JOYCONR && \
-	 (ctlr->ctlr_type == JOYCON_CTLR_TYPE_NESL || \
-	  ctlr->ctlr_type == JOYCON_CTLR_TYPE_NESR))
-#define jc_type_is_snescon(ctlr) \
-	(ctlr->hdev->product == USB_DEVICE_ID_NINTENDO_SNESCON)
-#define jc_type_is_gencon(ctlr) \
-	(ctlr->hdev->product == USB_DEVICE_ID_NINTENDO_GENCON)
+static inline bool jc_type_is_chrggrip(struct joycon_ctlr *ctlr)
+{
+	return ctlr->hdev->product == USB_DEVICE_ID_NINTENDO_CHRGGRIP;
+}
 
-/* Does this controller have inputs associated with left joycon? */
-#define jc_type_has_left(ctlr) \
-	(ctlr->ctlr_type == JOYCON_CTLR_TYPE_JCL || \
-	 ctlr->ctlr_type == JOYCON_CTLR_TYPE_PRO)
+static inline bool jc_type_is_procon(struct joycon_ctlr *ctlr)
+{
+	return ctlr->hdev->product == USB_DEVICE_ID_NINTENDO_PROCON;
+}
 
-/* Does this controller have inputs associated with right joycon? */
-#define jc_type_has_right(ctlr) \
-	(ctlr->ctlr_type == JOYCON_CTLR_TYPE_JCR || \
-	 ctlr->ctlr_type == JOYCON_CTLR_TYPE_PRO)
+static inline bool jc_type_is_joycon(struct joycon_ctlr *ctlr)
+{
+	return (ctlr->ctlr_type == JOYCON_CTLR_TYPE_JCL ||
+	   	ctlr->ctlr_type == JOYCON_CTLR_TYPE_JCR ||
+	    	jc_type_is_chrggrip(ctlr));
+}
 
-/* Can this controller be connected via USB */
-#define jc_has_usb(ctlr) \
-	(jc_type_is_procon(ctlr) || \
-	 jc_type_is_chrggrip(ctlr) || \
-	 jc_type_is_snescon(ctlr) || \
-	 jc_type_is_gencon(ctlr))
+static inline bool jc_type_is_nescon(struct joycon_ctlr *ctlr)
+{
+	return ctlr->ctlr_type == JOYCON_CTLR_TYPE_NESL ||
+	       ctlr->ctlr_type == JOYCON_CTLR_TYPE_NESR;
+}
 
-#define jc_has_imu(ctlr) \
-	(jc_type_is_joycon(ctlr) || jc_type_is_procon(ctlr))
+static inline bool jc_type_is_snescon(struct joycon_ctlr *ctlr)
+{
+	return ctlr->ctlr_type == JOYCON_CTLR_TYPE_SNES;
+}
+
+static inline bool jc_type_is_gencon(struct joycon_ctlr *ctlr)
+{
+	return ctlr->ctlr_type == JOYCON_CTLR_TYPE_GEN;
+}
+
+static inline bool jc_type_has_left(struct joycon_ctlr *ctlr)
+{
+	return ctlr->ctlr_type == JOYCON_CTLR_TYPE_JCL ||
+	       ctlr->ctlr_type == JOYCON_CTLR_TYPE_PRO;
+}
+
+static inline bool jc_type_has_right(struct joycon_ctlr *ctlr)
+{
+	return ctlr->ctlr_type == JOYCON_CTLR_TYPE_JCR ||
+	       ctlr->ctlr_type == JOYCON_CTLR_TYPE_PRO;
+}
+
+static inline bool jc_has_usb(struct joycon_ctlr *ctlr)
+{
+	return jc_type_is_procon(ctlr) ||
+	       jc_type_is_chrggrip(ctlr) ||
+	       jc_type_is_snescon(ctlr) ||
+	       jc_type_is_gencon(ctlr);
+}
+
+static inline bool jc_has_imu(struct joycon_ctlr *ctlr)
+{
+	return jc_type_is_joycon(ctlr) || jc_type_is_procon(ctlr);
+}
 
 static int __joycon_hid_send(struct hid_device *hdev, u8 *data, size_t len)
 {
