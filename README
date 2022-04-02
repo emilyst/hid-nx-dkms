@@ -13,8 +13,15 @@ Supported controllers
   * <https://www.nintendo.com/store/products/super-nintendo-entertainment-system-controller/>
 * NES controller
   * <https://www.nintendo.com/store/products/nintendo-entertainment-system-controllers/>
-* Sega Genesis control pad (partial Bluetooth support, full USB support)
+* Sega Genesis control pad
   * <https://www.nintendo.com/store/products/sega-genesis-control-pad/>
+
+
+Status
+------
+
+This driver should be considered preliminary and not production-ready
+(for whatever value of "production" applies to Nintendo controllers).
 
 
 Installation
