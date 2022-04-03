@@ -609,8 +609,10 @@ static int __nx_ctlr_hid_send(struct hid_device *hdev, u8 *data, size_t len)
 
 	if (!(buf = kmemdup(data, len, GFP_KERNEL)))
 		return -ENOMEM;
+
 	if ((ret = hid_hw_output_report(hdev, buf, len)) < 0)
 		hid_dbg(hdev, "Failed to send output report ret=%d\n", ret);
+
 	kfree(buf);
 	return ret;
 }
