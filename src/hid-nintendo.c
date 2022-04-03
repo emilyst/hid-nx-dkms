@@ -490,6 +490,16 @@ struct nx_ctlr {
 	unsigned int imu_avg_delta_ms;
 };
 
+/*
+ * Controller device helpers
+ *
+ * These look at the device ID known to the HID subsystem to identify a device,
+ * but take caution: some NSO devices lie about themselves (NES Joy-Cons and
+ * Sega Genesis controller). See type helpers below.
+ *
+ * These helpers are most useful early during the HID probe or in conjunction
+ * with the capability helpers below.
+ */
 static inline bool nx_ctlr_device_is_left_joycon(struct nx_ctlr *ctlr)
 {
 	return ctlr->hdev->product == USB_DEVICE_ID_NINTENDO_JOYCONL;
@@ -527,7 +537,7 @@ static inline bool nx_ctlr_device_is_any_joycon(struct nx_ctlr *ctlr)
 	       nx_ctlr_device_is_chrggrip(ctlr);
 }
 
-static inline bool nx_ctlr_device_uses_usb(struct nx_ctlr *ctlr)
+static inline bool nx_ctlr_device_has_usb(struct nx_ctlr *ctlr)
 {
 	return nx_ctlr_device_is_procon(ctlr) ||
 	       nx_ctlr_device_is_chrggrip(ctlr) ||
@@ -535,6 +545,19 @@ static inline bool nx_ctlr_device_uses_usb(struct nx_ctlr *ctlr)
 	       nx_ctlr_device_is_gencon(ctlr);
 }
 
+/*
+ * Controller type helpers
+ *
+ * These are slightly different than the device-ID-based helpers above. They are
+ * generally more reliable, since they can distinguish between, e.g., Genesis
+ * versus SNES, or NES Joy-Cons versus regular Switch Joy-Cons. They're most
+ * useful for reporting available inputs. For other kinds of distinctions, see
+ * the capability helpers below.
+ *
+ * They have two major drawbacks: (1) they're not available until after we set
+ * the reporting method and then request the device info; (2) they can't
+ * distinguish all controllers (like the Charging Grip from the Pro controller.)
+ */
 static inline bool nx_ctlr_type_is_left_joycon(struct nx_ctlr *ctlr)
 {
 	return ctlr->type == NX_CTLR_TYPE_JCL;
@@ -595,7 +618,28 @@ static inline bool nx_ctlr_type_is_any_nescon(struct nx_ctlr *ctlr)
 	       nx_ctlr_type_is_right_nescon(ctlr);
 }
 
-static inline bool nx_ctlr_uses_imu(struct nx_ctlr *ctlr)
+/*
+ * Controller capability helpers
+ *
+ * These helpers combine the use of the helpers above to detect certain
+ * capabilities during initialization. They are always accurate but (since they
+ * use type helpers) cannot be used early in the HID probe.
+ */
+static inline bool nx_ctlr_has_imu(struct nx_ctlr *ctlr)
+{
+	return nx_ctlr_device_is_chrggrip(ctlr) ||
+	       nx_ctlr_type_is_any_joycon(ctlr) ||
+	       nx_ctlr_type_is_procon(ctlr);
+}
+
+static inline bool nx_ctlr_has_joysticks(struct nx_ctlr *ctlr)
+{
+	return nx_ctlr_device_is_chrggrip(ctlr) ||
+	       nx_ctlr_type_is_any_joycon(ctlr) ||
+	       nx_ctlr_type_is_procon(ctlr);
+}
+
+static inline bool nx_ctlr_has_rumble(struct nx_ctlr *ctlr)
 {
 	return nx_ctlr_device_is_chrggrip(ctlr) ||
 	       nx_ctlr_type_is_any_joycon(ctlr) ||
@@ -1508,7 +1552,7 @@ static void nx_ctlr_parse_report(struct nx_ctlr *ctlr,
 	}
 
 	/* parse IMU data if present */
-	if (rep->id == NX_CTLR_INPUT_IMU_DATA && nx_ctlr_uses_imu(ctlr))
+	if (rep->id == NX_CTLR_INPUT_IMU_DATA && nx_ctlr_has_imu(ctlr))
 		nx_ctlr_parse_imu_report(ctlr, rep);
 }
 
@@ -2428,13 +2472,15 @@ static int nintendo_hid_probe(struct hid_device *hdev,
 	mutex_lock(&ctlr->output_mutex);
 
 	/* if handshake command fails, assume ble pro controller */
-	if (nx_ctlr_device_uses_usb(ctlr) &&
+	if (nx_ctlr_device_has_usb(ctlr) && 
 	    !nx_ctlr_send_usb(ctlr, NX_CTLR_USB_CMD_HANDSHAKE, HZ)) {
 		hid_dbg(hdev, "detected USB controller\n");
+
 		if ((ret = nx_ctlr_send_usb(ctlr, NX_CTLR_USB_CMD_BAUDRATE_3M, HZ))) {
 			hid_err(hdev, "Failed to set baudrate; ret=%d\n", ret);
 			goto err_mutex;
 		}
+
 		if ((ret = nx_ctlr_send_usb(ctlr, NX_CTLR_USB_CMD_HANDSHAKE, HZ))) {
 			hid_err(hdev, "Failed handshake; ret=%d\n", ret);
 			goto err_mutex;
@@ -2457,14 +2503,11 @@ static int nintendo_hid_probe(struct hid_device *hdev,
 
 	/* needed for `ctlr->type` */
 	if ((ret = nx_ctlr_request_device_info(ctlr))) {
-		hid_err(hdev, "Failed to retrieve controller info; ret=%d\n",
-			ret);
+		hid_err(hdev, "Failed to retrieve controller info; ret=%d\n", ret);
 		goto err_mutex;
 	}
 
-	if (!nx_ctlr_type_is_any_nescon(ctlr) &&
-	    !nx_ctlr_device_is_snescon(ctlr) &&
-	    !nx_ctlr_device_is_gencon(ctlr)) {
+	if (nx_ctlr_has_joysticks(ctlr)) {
 		if (nx_ctlr_request_calibration(ctlr)) {
 			/*
 			* We can function with default calibration, but it may be
@@ -2472,24 +2515,29 @@ static int nintendo_hid_probe(struct hid_device *hdev,
 			*/
 			hid_warn(hdev, "Analog stick positions may be inaccurate\n");
 		}
+	}
 
+	if (nx_ctlr_has_imu(ctlr)) {
 		if (nx_ctlr_request_imu_calibration(ctlr)) {
 			/*
 			* We can function with default calibration, but it may be
 			* inaccurate. Provide a warning, and continue on.
 			*/
 			hid_warn(hdev, "Unable to read IMU calibration data\n");
-		}
 
+			if ((ret = nx_ctlr_enable_imu(ctlr))) {
+				hid_err(hdev, "Failed to enable the IMU; ret=%d\n", ret);
+				goto err_mutex;
+			}
+		}
+	}
+
+	if (nx_ctlr_has_rumble(ctlr)) {
 		if ((ret = nx_ctlr_enable_rumble(ctlr))) {
 			hid_err(hdev, "Failed to enable rumble; ret=%d\n", ret);
 			goto err_mutex;
 		}
 
-		if ((ret = nx_ctlr_enable_imu(ctlr))) {
-			hid_err(hdev, "Failed to enable the IMU; ret=%d\n", ret);
-			goto err_mutex;
-		}
 	}
 
 	mutex_unlock(&ctlr->output_mutex);
@@ -2520,7 +2568,7 @@ static int nintendo_hid_probe(struct hid_device *hdev,
 	hid_dbg(hdev, "device_is_snescon       = %d\n", nx_ctlr_device_is_snescon(ctlr));
 	hid_dbg(hdev, "device_is_gencon        = %d\n", nx_ctlr_device_is_gencon(ctlr));
 	hid_dbg(hdev, "device_is_any_joycon    = %d\n", nx_ctlr_device_is_any_joycon(ctlr));
-	hid_dbg(hdev, "device_uses_usb         = %d\n", nx_ctlr_device_uses_usb(ctlr));
+	hid_dbg(hdev, "device_has_usb          = %d\n", nx_ctlr_device_has_usb(ctlr));
 	hid_dbg(hdev, "type_is_left_joycon     = %d\n", nx_ctlr_type_is_left_joycon(ctlr));
 	hid_dbg(hdev, "type_is_right_joycon    = %d\n", nx_ctlr_type_is_right_joycon(ctlr));
 	hid_dbg(hdev, "type_is_procon          = %d\n", nx_ctlr_type_is_procon(ctlr));
@@ -2532,7 +2580,9 @@ static int nintendo_hid_probe(struct hid_device *hdev,
 	hid_dbg(hdev, "type_has_right_controls = %d\n", nx_ctlr_type_has_right_controls(ctlr));
 	hid_dbg(hdev, "type_is_any_joycon      = %d\n", nx_ctlr_type_is_any_joycon(ctlr));
 	hid_dbg(hdev, "type_is_any_nescon      = %d\n", nx_ctlr_type_is_any_nescon(ctlr));
-	hid_dbg(hdev, "uses_imu                = %d\n", nx_ctlr_uses_imu(ctlr));
+	hid_dbg(hdev, "has_imu                 = %d\n", nx_ctlr_has_imu(ctlr));
+	hid_dbg(hdev, "has_joysticks           = %d\n", nx_ctlr_has_joysticks(ctlr));
+	hid_dbg(hdev, "has_rumble              = %d\n", nx_ctlr_has_rumble(ctlr));
 
 	return 0;
 
