@@ -2261,7 +2261,7 @@ static int nx_ctlr_power_supply_create(struct nx_ctlr *ctlr)
 	return power_supply_powers(ctlr->battery, &hdev->dev);
 }
 
-static int nx_ctlr_read_info(struct nx_ctlr *ctlr)
+static int nx_ctlr_request_device_info(struct nx_ctlr *ctlr)
 {
 	int ret;
 	int i;
@@ -2280,7 +2280,8 @@ static int nx_ctlr_read_info(struct nx_ctlr *ctlr)
 	for (i = 4, j = 0; j < 6; i++, j++)
 		ctlr->mac_addr[j] = report->subcmd_reply.data[i];
 
-	ctlr->mac_addr_str = devm_kasprintf(&ctlr->hdev->dev, GFP_KERNEL,
+	ctlr->mac_addr_str = devm_kasprintf(&ctlr->hdev->dev,
+					    GFP_KERNEL,
 					    "%02X:%02X:%02X:%02X:%02X:%02X",
 					    ctlr->mac_addr[0],
 					    ctlr->mac_addr[1],
@@ -2294,6 +2295,8 @@ static int nx_ctlr_read_info(struct nx_ctlr *ctlr)
 
 	/* Retrieve the type so we can distinguish for charging grip */
 	ctlr->ctlr_type = report->subcmd_reply.data[2];
+
+	hid_dbg(ctlr->hdev, "ctlr->ctlr_type = 0x%02X\n", ctlr->ctlr_type);
 
 	return 0;
 }
@@ -2457,6 +2460,13 @@ static int nintendo_hid_probe(struct hid_device *hdev,
 		goto err_mutex;
 	}
 
+	/* needed for `ctlr->ctlr_type` */
+	if ((ret = nx_ctlr_request_device_info(ctlr))) {
+		hid_err(hdev, "Failed to retrieve controller info; ret=%d\n",
+			ret);
+		goto err_mutex;
+	}
+
 	if (!nx_ctlr_type_is_any_nescon(ctlr) &&
 	    !nx_ctlr_device_is_snescon(ctlr) &&
 	    !nx_ctlr_device_is_gencon(ctlr)) {
@@ -2485,12 +2495,6 @@ static int nintendo_hid_probe(struct hid_device *hdev,
 			hid_err(hdev, "Failed to enable the IMU; ret=%d\n", ret);
 			goto err_mutex;
 		}
-	}
-
-	if ((ret = nx_ctlr_read_info(ctlr))) {
-		hid_err(hdev, "Failed to retrieve controller info; ret=%d\n",
-			ret);
-		goto err_mutex;
 	}
 
 	mutex_unlock(&ctlr->output_mutex);
