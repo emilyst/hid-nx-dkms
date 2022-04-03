@@ -723,8 +723,7 @@ static int nx_ctlr_hid_send_sync(struct nx_ctlr *ctlr, u8 *data, size_t len, u32
 			hid_dbg(ctlr->hdev,
 				"synchronous send/receive timed out\n");
 			if (tries) {
-				hid_dbg(ctlr->hdev,
-					"retrying sync send after timeout\n");
+				hid_dbg(ctlr->hdev, "retrying sync send after timeout\n");
 			}
 			memset(ctlr->input_buf, 0, NX_CTLR_MAX_RESP_SIZE);
 			ret = -ETIMEDOUT;
@@ -1217,15 +1216,14 @@ static void nx_ctlr_parse_imu_report(struct nx_ctlr *ctlr,
 		/* avg imu report delta housekeeping */
 		ctlr->imu_delta_samples_sum += delta;
 		ctlr->imu_delta_samples_count++;
-		if (ctlr->imu_delta_samples_count >=
-		    NX_CTLR_IMU_SAMPLES_PER_DELTA_AVG) {
+
+		if (ctlr->imu_delta_samples_count >= NX_CTLR_IMU_SAMPLES_PER_DELTA_AVG) {
 			ctlr->imu_avg_delta_ms = ctlr->imu_delta_samples_sum /
 						 ctlr->imu_delta_samples_count;
 			/* don't ever want divide by zero shenanigans */
 			if (ctlr->imu_avg_delta_ms == 0) {
 				ctlr->imu_avg_delta_ms = 1;
-				hid_warn(ctlr->hdev,
-					 "calculated avg imu delta of 0\n");
+				hid_warn(ctlr->hdev, "calculated avg imu delta of 0\n");
 			}
 			ctlr->imu_delta_samples_count = 0;
 			ctlr->imu_delta_samples_sum = 0;
@@ -1343,13 +1341,13 @@ static void nx_ctlr_parse_imu_report(struct nx_ctlr *ctlr,
 		input_report_abs(idev, ABS_Y, value[4]);
 		input_report_abs(idev, ABS_Z, value[5]);
 		input_sync(idev);
+
 		/* convert to micros and divide by 3 (3 samples per report). */
 		ctlr->imu_timestamp_us += ctlr->imu_avg_delta_ms * 1000 / 3;
 	}
 }
 
-static void nx_ctlr_parse_report(struct nx_ctlr *ctlr,
-				 struct nx_ctlr_input_report *rep)
+static void nx_ctlr_parse_report(struct nx_ctlr *ctlr, struct nx_ctlr_input_report *rep)
 {
 	struct input_dev *dev = ctlr->input;
 	unsigned long flags;
@@ -1430,14 +1428,10 @@ static void nx_ctlr_parse_report(struct nx_ctlr *ctlr,
 			input_report_key(dev, BTN_TR2, btns & NX_CTLR_BTN_SR_L);
 
 			/* Report d-pad as digital buttons for the joy-cons */
-			input_report_key(dev, BTN_DPAD_DOWN,
-					 btns & NX_CTLR_BTN_DOWN);
-			input_report_key(dev, BTN_DPAD_UP,
-					 btns & NX_CTLR_BTN_UP);
-			input_report_key(dev, BTN_DPAD_RIGHT,
-					 btns & NX_CTLR_BTN_RIGHT);
-			input_report_key(dev, BTN_DPAD_LEFT,
-					 btns & NX_CTLR_BTN_LEFT);
+			input_report_key(dev, BTN_DPAD_DOWN, btns & NX_CTLR_BTN_DOWN);
+			input_report_key(dev, BTN_DPAD_UP, btns & NX_CTLR_BTN_UP);
+			input_report_key(dev, BTN_DPAD_RIGHT, btns & NX_CTLR_BTN_RIGHT);
+			input_report_key(dev, BTN_DPAD_LEFT, btns & NX_CTLR_BTN_LEFT);
 		} else {
 			int hatx = 0;
 			int haty = 0;
@@ -1603,8 +1597,7 @@ static void nx_ctlr_rumble_worker(struct work_struct *work)
 
 		/* -ENODEV means the controller was just unplugged */
 		spin_lock_irqsave(&ctlr->lock, flags);
-		if (ret < 0 && ret != -ENODEV &&
-		    ctlr->ctlr_state != NX_CTLR_STATE_REMOVED)
+		if (ret < 0 && ret != -ENODEV && ctlr->ctlr_state != NX_CTLR_STATE_REMOVED)
 			hid_warn(ctlr->hdev, "Failed to set rumble; e=%d", ret);
 
 		ctlr->rumble_msecs = jiffies_to_msecs(jiffies);
@@ -1651,10 +1644,7 @@ static struct nx_ctlr_rumble_amp_data nx_ctlr_find_rumble_amp(u16 amp)
 	return data[i];
 }
 
-static void nx_ctlr_encode_rumble(u8 *data,
-				  u16 freq_low,
-				  u16 freq_high,
-				  u16 amp)
+static void nx_ctlr_encode_rumble(u8 *data, u16 freq_low, u16 freq_high, u16 amp)
 {
 	struct nx_ctlr_rumble_freq_data freq_data_low;
 	struct nx_ctlr_rumble_freq_data freq_data_high;
@@ -2472,7 +2462,7 @@ static int nintendo_hid_probe(struct hid_device *hdev,
 	mutex_lock(&ctlr->output_mutex);
 
 	/* if handshake command fails, assume ble pro controller */
-	if (nx_ctlr_device_has_usb(ctlr) && 
+	if (nx_ctlr_device_has_usb(ctlr) &&
 	    !nx_ctlr_send_usb(ctlr, NX_CTLR_USB_CMD_HANDSHAKE, HZ)) {
 		hid_dbg(hdev, "detected USB controller\n");
 
@@ -2618,24 +2608,16 @@ static void nintendo_hid_remove(struct hid_device *hdev)
 }
 
 static const struct hid_device_id nintendo_hid_devices[] = {
-	{ HID_USB_DEVICE(USB_VENDOR_ID_NINTENDO,
-			 USB_DEVICE_ID_NINTENDO_PROCON)        },
-	{ HID_USB_DEVICE(USB_VENDOR_ID_NINTENDO,
-			 USB_DEVICE_ID_NINTENDO_CHRGGRIP)      },
-	{ HID_USB_DEVICE(USB_VENDOR_ID_NINTENDO,
-			 USB_DEVICE_ID_NINTENDO_SNESCON)       },
-	{ HID_USB_DEVICE(USB_VENDOR_ID_NINTENDO,
-			 USB_DEVICE_ID_NINTENDO_GENCON)        },
-	{ HID_BLUETOOTH_DEVICE(USB_VENDOR_ID_NINTENDO,
-			       USB_DEVICE_ID_NINTENDO_PROCON)  },
-	{ HID_BLUETOOTH_DEVICE(USB_VENDOR_ID_NINTENDO,
-			       USB_DEVICE_ID_NINTENDO_JOYCONL) },
-	{ HID_BLUETOOTH_DEVICE(USB_VENDOR_ID_NINTENDO,
-			       USB_DEVICE_ID_NINTENDO_JOYCONR) },
-	{ HID_BLUETOOTH_DEVICE(USB_VENDOR_ID_NINTENDO,
-			       USB_DEVICE_ID_NINTENDO_SNESCON) },
-	{ HID_BLUETOOTH_DEVICE(USB_VENDOR_ID_NINTENDO,
-			       USB_DEVICE_ID_NINTENDO_GENCON)  },
+	{ HID_USB_DEVICE(USB_VENDOR_ID_NINTENDO, USB_DEVICE_ID_NINTENDO_PROCON)        },
+	{ HID_USB_DEVICE(USB_VENDOR_ID_NINTENDO, USB_DEVICE_ID_NINTENDO_CHRGGRIP)      },
+	{ HID_USB_DEVICE(USB_VENDOR_ID_NINTENDO, USB_DEVICE_ID_NINTENDO_SNESCON)       },
+	{ HID_USB_DEVICE(USB_VENDOR_ID_NINTENDO, USB_DEVICE_ID_NINTENDO_GENCON)        },
+
+	{ HID_BLUETOOTH_DEVICE(USB_VENDOR_ID_NINTENDO, USB_DEVICE_ID_NINTENDO_PROCON)  },
+	{ HID_BLUETOOTH_DEVICE(USB_VENDOR_ID_NINTENDO, USB_DEVICE_ID_NINTENDO_JOYCONL) },
+	{ HID_BLUETOOTH_DEVICE(USB_VENDOR_ID_NINTENDO, USB_DEVICE_ID_NINTENDO_JOYCONR) },
+	{ HID_BLUETOOTH_DEVICE(USB_VENDOR_ID_NINTENDO, USB_DEVICE_ID_NINTENDO_SNESCON) },
+	{ HID_BLUETOOTH_DEVICE(USB_VENDOR_ID_NINTENDO, USB_DEVICE_ID_NINTENDO_GENCON)  },
 	{ }
 };
 MODULE_DEVICE_TABLE(hid, nintendo_hid_devices);
