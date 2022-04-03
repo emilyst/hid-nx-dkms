@@ -432,7 +432,7 @@ struct nx_ctlr {
 	spinlock_t lock;
 	u8 mac_addr[6];
 	char *mac_addr_str;
-	enum nx_ctlr_type ctlr_type;
+	enum nx_ctlr_type type;
 
 	/* The following members are used for synchronous sends/receives */
 	enum nx_ctlr_msg_type msg_type;
@@ -537,37 +537,37 @@ static inline bool nx_ctlr_device_uses_usb(struct nx_ctlr *ctlr)
 
 static inline bool nx_ctlr_type_is_left_joycon(struct nx_ctlr *ctlr)
 {
-	return ctlr->ctlr_type == NX_CTLR_TYPE_JCL;
+	return ctlr->type == NX_CTLR_TYPE_JCL;
 }
 
 static inline bool nx_ctlr_type_is_right_joycon(struct nx_ctlr *ctlr)
 {
-	return ctlr->ctlr_type == NX_CTLR_TYPE_JCR;
+	return ctlr->type == NX_CTLR_TYPE_JCR;
 }
 
 static inline bool nx_ctlr_type_is_procon(struct nx_ctlr *ctlr)
 {
-	return ctlr->ctlr_type == NX_CTLR_TYPE_PRO;
+	return ctlr->type == NX_CTLR_TYPE_PRO;
 }
 
 static inline bool nx_ctlr_type_is_snescon(struct nx_ctlr *ctlr)
 {
-	return ctlr->ctlr_type == NX_CTLR_TYPE_SNES;
+	return ctlr->type == NX_CTLR_TYPE_SNES;
 }
 
 static inline bool nx_ctlr_type_is_gencon(struct nx_ctlr *ctlr)
 {
-	return ctlr->ctlr_type == NX_CTLR_TYPE_GEN;
+	return ctlr->type == NX_CTLR_TYPE_GEN;
 }
 
 static inline bool nx_ctlr_type_is_left_nescon(struct nx_ctlr *ctlr)
 {
-	return ctlr->ctlr_type == NX_CTLR_TYPE_NESL;
+	return ctlr->type == NX_CTLR_TYPE_NESL;
 }
 
 static inline bool nx_ctlr_type_is_right_nescon(struct nx_ctlr *ctlr)
 {
-	return ctlr->ctlr_type == NX_CTLR_TYPE_NESR;
+	return ctlr->type == NX_CTLR_TYPE_NESR;
 }
 
 static inline bool nx_ctlr_type_has_left_controls(struct nx_ctlr *ctlr)
@@ -2294,9 +2294,9 @@ static int nx_ctlr_request_device_info(struct nx_ctlr *ctlr)
 	hid_info(ctlr->hdev, "controller MAC = %s\n", ctlr->mac_addr_str);
 
 	/* Retrieve the type so we can distinguish for charging grip */
-	ctlr->ctlr_type = report->subcmd_reply.data[2];
+	ctlr->type = report->subcmd_reply.data[2];
 
-	hid_dbg(ctlr->hdev, "ctlr->ctlr_type = 0x%02X\n", ctlr->ctlr_type);
+	hid_dbg(ctlr->hdev, "ctlr->type = 0x%02X\n", ctlr->type);
 
 	return 0;
 }
@@ -2460,7 +2460,7 @@ static int nintendo_hid_probe(struct hid_device *hdev,
 		goto err_mutex;
 	}
 
-	/* needed for `ctlr->ctlr_type` */
+	/* needed for `ctlr->type` */
 	if ((ret = nx_ctlr_request_device_info(ctlr))) {
 		hid_err(hdev, "Failed to retrieve controller info; ret=%d\n",
 			ret);
