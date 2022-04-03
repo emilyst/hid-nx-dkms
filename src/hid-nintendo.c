@@ -490,21 +490,49 @@ struct nx_ctlr {
 	unsigned int imu_avg_delta_ms;
 };
 
-static inline bool nx_ctlr_type_is_chrggrip(struct nx_ctlr *ctlr)
+static inline bool nx_ctlr_device_is_left_joycon(struct nx_ctlr *ctlr)
 {
-	return ctlr->hdev->product == USB_DEVICE_ID_NINTENDO_CHRGGRIP;
+	return ctlr->hdev->product == USB_DEVICE_ID_NINTENDO_JOYCONL;
 }
 
-static inline bool nx_ctlr_type_is_procon(struct nx_ctlr *ctlr)
+static inline bool nx_ctlr_device_is_right_joycon(struct nx_ctlr *ctlr)
+{
+	return ctlr->hdev->product == USB_DEVICE_ID_NINTENDO_JOYCONR;
+}
+
+static inline bool nx_ctlr_device_is_procon(struct nx_ctlr *ctlr)
 {
 	return ctlr->hdev->product == USB_DEVICE_ID_NINTENDO_PROCON;
 }
 
-static inline bool nx_ctlr_type_is_joycon(struct nx_ctlr *ctlr)
+static inline bool nx_ctlr_device_is_chrggrip(struct nx_ctlr *ctlr)
 {
-	return ctlr->ctlr_type == NX_CTLR_TYPE_JCL ||
-	       ctlr->ctlr_type == NX_CTLR_TYPE_JCR ||
-	       nx_ctlr_type_is_chrggrip(ctlr);
+	return ctlr->hdev->product == USB_DEVICE_ID_NINTENDO_CHRGGRIP;
+}
+
+static inline bool nx_ctlr_device_is_snescon(struct nx_ctlr *ctlr)
+{
+	return ctlr->hdev->product == USB_DEVICE_ID_NINTENDO_SNESCON;
+}
+
+static inline bool nx_ctlr_device_is_gencon(struct nx_ctlr *ctlr)
+{
+	return ctlr->hdev->product == USB_DEVICE_ID_NINTENDO_GENCON;
+}
+
+static inline bool nx_ctlr_device_is_any_joycon(struct nx_ctlr *ctlr)
+{
+	return nx_ctlr_device_is_right_joycon(ctlr) ||
+	       nx_ctlr_device_is_left_joycon(ctlr) ||
+	       nx_ctlr_device_is_chrggrip(ctlr);
+}
+
+static inline bool nx_ctlr_device_uses_usb(struct nx_ctlr *ctlr)
+{
+	return nx_ctlr_device_is_procon(ctlr) ||
+	       nx_ctlr_device_is_chrggrip(ctlr) ||
+	       nx_ctlr_device_is_snescon(ctlr) ||
+	       nx_ctlr_device_is_gencon(ctlr);
 }
 
 static inline bool nx_ctlr_type_is_left_joycon(struct nx_ctlr *ctlr)
@@ -517,20 +545,9 @@ static inline bool nx_ctlr_type_is_right_joycon(struct nx_ctlr *ctlr)
 	return ctlr->ctlr_type == NX_CTLR_TYPE_JCR;
 }
 
-static inline bool nx_ctlr_type_is_nescon(struct nx_ctlr *ctlr)
+static inline bool nx_ctlr_type_is_procon(struct nx_ctlr *ctlr)
 {
-	return ctlr->ctlr_type == NX_CTLR_TYPE_NESL ||
-	       ctlr->ctlr_type == NX_CTLR_TYPE_NESR;
-}
-
-static inline bool nx_ctlr_type_is_left_nescon(struct nx_ctlr *ctlr)
-{
-	return ctlr->ctlr_type == NX_CTLR_TYPE_NESL;
-}
-
-static inline bool nx_ctlr_type_is_right_nescon(struct nx_ctlr *ctlr)
-{
-	return ctlr->ctlr_type == NX_CTLR_TYPE_NESR;
+	return ctlr->ctlr_type == NX_CTLR_TYPE_PRO;
 }
 
 static inline bool nx_ctlr_type_is_snescon(struct nx_ctlr *ctlr)
@@ -543,29 +560,46 @@ static inline bool nx_ctlr_type_is_gencon(struct nx_ctlr *ctlr)
 	return ctlr->ctlr_type == NX_CTLR_TYPE_GEN;
 }
 
-static inline bool nx_ctlr_type_has_left(struct nx_ctlr *ctlr)
+static inline bool nx_ctlr_type_is_left_nescon(struct nx_ctlr *ctlr)
 {
-	return ctlr->ctlr_type == NX_CTLR_TYPE_JCL ||
-	       ctlr->ctlr_type == NX_CTLR_TYPE_PRO;
+	return ctlr->ctlr_type == NX_CTLR_TYPE_NESL;
 }
 
-static inline bool nx_ctlr_type_has_right(struct nx_ctlr *ctlr)
+static inline bool nx_ctlr_type_is_right_nescon(struct nx_ctlr *ctlr)
 {
-	return ctlr->ctlr_type == NX_CTLR_TYPE_JCR ||
-	       ctlr->ctlr_type == NX_CTLR_TYPE_PRO;
+	return ctlr->ctlr_type == NX_CTLR_TYPE_NESR;
 }
 
-static inline bool nx_ctlr_uses_usb(struct nx_ctlr *ctlr)
+static inline bool nx_ctlr_type_has_left_controls(struct nx_ctlr *ctlr)
 {
-	return nx_ctlr_type_is_procon(ctlr) ||
-	       nx_ctlr_type_is_chrggrip(ctlr) ||
-	       nx_ctlr_type_is_snescon(ctlr) ||
-	       nx_ctlr_type_is_gencon(ctlr);
+	return nx_ctlr_type_is_left_joycon(ctlr) ||
+	       nx_ctlr_type_is_procon(ctlr);
+}
+
+static inline bool nx_ctlr_type_has_right_controls(struct nx_ctlr *ctlr)
+{
+	return nx_ctlr_type_is_right_joycon(ctlr) ||
+	       nx_ctlr_type_is_procon(ctlr);
+}
+
+static inline bool nx_ctlr_type_is_any_joycon(struct nx_ctlr *ctlr)
+{
+	return nx_ctlr_type_is_left_joycon(ctlr) ||
+	       nx_ctlr_type_is_right_joycon(ctlr) ||
+	       nx_ctlr_device_is_chrggrip(ctlr);
+}
+
+static inline bool nx_ctlr_type_is_any_nescon(struct nx_ctlr *ctlr)
+{
+	return nx_ctlr_type_is_left_nescon(ctlr) ||
+	       nx_ctlr_type_is_right_nescon(ctlr);
 }
 
 static inline bool nx_ctlr_uses_imu(struct nx_ctlr *ctlr)
 {
-	return nx_ctlr_type_is_joycon(ctlr) || nx_ctlr_type_is_procon(ctlr);
+	return nx_ctlr_device_is_chrggrip(ctlr) ||
+	       nx_ctlr_type_is_any_joycon(ctlr) ||
+	       nx_ctlr_type_is_procon(ctlr);
 }
 
 static int __nx_ctlr_hid_send(struct hid_device *hdev, u8 *data, size_t len)
@@ -1328,7 +1362,7 @@ static void nx_ctlr_parse_report(struct nx_ctlr *ctlr,
 
 	btns = hid_field_extract(ctlr->hdev, rep->button_status, 0, 24);
 
-	if (nx_ctlr_type_has_left(ctlr)) {
+	if (nx_ctlr_type_has_left_controls(ctlr)) {
 		u16 raw_x;
 		u16 raw_y;
 		s32 x;
@@ -1349,7 +1383,7 @@ static void nx_ctlr_parse_report(struct nx_ctlr *ctlr,
 		input_report_key(dev, BTN_THUMBL, btns & NX_CTLR_BTN_LSTICK);
 		input_report_key(dev, BTN_Z, btns & NX_CTLR_BTN_CAP);
 
-		if (nx_ctlr_type_is_joycon(ctlr)) {
+		if (nx_ctlr_type_is_any_joycon(ctlr)) {
 			/* Report the S buttons as the non-existent triggers */
 			input_report_key(dev, BTN_TR, btns & NX_CTLR_BTN_SL_L);
 			input_report_key(dev, BTN_TR2, btns & NX_CTLR_BTN_SR_L);
@@ -1382,7 +1416,7 @@ static void nx_ctlr_parse_report(struct nx_ctlr *ctlr,
 			input_report_abs(dev, ABS_HAT0Y, haty);
 		}
 	}
-	if (nx_ctlr_type_has_right(ctlr)) {
+	if (nx_ctlr_type_has_right_controls(ctlr)) {
 		u16 raw_x;
 		u16 raw_y;
 		s32 x;
@@ -1400,7 +1434,7 @@ static void nx_ctlr_parse_report(struct nx_ctlr *ctlr,
 
 		input_report_key(dev, BTN_TR, btns & NX_CTLR_BTN_R);
 		input_report_key(dev, BTN_TR2, btns & NX_CTLR_BTN_ZR);
-		if (nx_ctlr_type_is_joycon(ctlr)) {
+		if (nx_ctlr_type_is_any_joycon(ctlr)) {
 			/* Report the S buttons as the non-existent triggers */
 			input_report_key(dev, BTN_TL, btns & NX_CTLR_BTN_SL_R);
 			input_report_key(dev, BTN_TL2, btns & NX_CTLR_BTN_SR_R);
@@ -1413,8 +1447,8 @@ static void nx_ctlr_parse_report(struct nx_ctlr *ctlr,
 		input_report_key(dev, BTN_EAST, btns & NX_CTLR_BTN_A);
 		input_report_key(dev, BTN_SOUTH, btns & NX_CTLR_BTN_B);
 	}
-	if (nx_ctlr_type_is_nescon(ctlr) || \
-	    nx_ctlr_type_is_snescon(ctlr) || \
+	if (nx_ctlr_type_is_any_nescon(ctlr) ||
+	    nx_ctlr_type_is_snescon(ctlr) ||
 	    nx_ctlr_type_is_gencon(ctlr)) {
 		s8 x;
 		s8 y;
@@ -1432,7 +1466,7 @@ static void nx_ctlr_parse_report(struct nx_ctlr *ctlr,
 		input_report_abs(dev, ABS_HAT0X, x);
 		input_report_abs(dev, ABS_HAT0Y, y);
 
-		if (nx_ctlr_type_is_nescon(ctlr)) {
+		if (nx_ctlr_type_is_any_nescon(ctlr)) {
 			input_report_key(dev, BTN_SELECT, btns & NX_CTLR_BTN_MINUS);
 			input_report_key(dev, BTN_START, btns & NX_CTLR_BTN_PLUS);
 			input_report_key(dev, BTN_EAST, btns & NX_CTLR_BTN_B);
@@ -1742,11 +1776,11 @@ static int nx_ctlr_input_create(struct nx_ctlr *ctlr)
 
 	hdev = ctlr->hdev;
 
-	if (nx_ctlr_type_is_procon(ctlr)) {
+	if (nx_ctlr_device_is_procon(ctlr)) {
 		name = "Nintendo Switch Pro Controller";
 		imu_name = "Nintendo Switch Pro Controller IMU";
-	} else if (nx_ctlr_type_is_chrggrip(ctlr)) {
-		if (nx_ctlr_type_has_left(ctlr)) {
+	} else if (nx_ctlr_device_is_chrggrip(ctlr)) {
+		if (nx_ctlr_type_has_left_controls(ctlr)) {
 			name = "Nintendo Switch Left Joy-Con (Grip)";
 			imu_name = "Nintendo Switch Left Joy-Con IMU (Grip)";
 		} else {
@@ -1787,7 +1821,7 @@ static int nx_ctlr_input_create(struct nx_ctlr *ctlr)
 	input_set_drvdata(ctlr->input, ctlr);
 
 	/* set up sticks and buttons */
-	if (nx_ctlr_type_has_left(ctlr)) {
+	if (nx_ctlr_type_has_left_controls(ctlr)) {
 		input_set_abs_params(ctlr->input,
 				     ABS_X,
 				     -NX_CTLR_MAX_STICK_MAG,
@@ -1806,7 +1840,7 @@ static int nx_ctlr_input_create(struct nx_ctlr *ctlr)
 					     nx_ctlr_button_inputs_l[i]);
 
 		/* configure d-pad differently for joy-con vs pro controller */
-		if (!(nx_ctlr_type_is_procon(ctlr))) {
+		if (!(nx_ctlr_device_is_procon(ctlr))) {
 			for (i = 0; nx_ctlr_dpad_inputs_jc[i] > 0; i++)
 				input_set_capability(ctlr->input,
 						     EV_KEY,
@@ -1826,7 +1860,7 @@ static int nx_ctlr_input_create(struct nx_ctlr *ctlr)
 					     NX_CTLR_DPAD_FLAT);
 		}
 	}
-	if (nx_ctlr_type_has_right(ctlr)) {
+	if (nx_ctlr_type_has_right_controls(ctlr)) {
 		input_set_abs_params(ctlr->input,
 				     ABS_RX,
 				     -NX_CTLR_MAX_STICK_MAG,
@@ -1845,7 +1879,7 @@ static int nx_ctlr_input_create(struct nx_ctlr *ctlr)
 					     EV_KEY,
 					     nx_ctlr_button_inputs_r[i]);
 	}
-	if (nx_ctlr_type_is_nescon(ctlr)) {
+	if (nx_ctlr_type_is_any_nescon(ctlr)) {
 		/* set up dpad hat */
 		input_set_abs_params(ctlr->input, ABS_HAT0X, -1, 1, 0, 0);
 		input_set_abs_params(ctlr->input, ABS_HAT0Y, -1, 1, 0, 0);
@@ -2110,8 +2144,10 @@ static int nx_ctlr_leds_create(struct nx_ctlr *ctlr)
 	mutex_unlock(&nx_ctlr_input_num_mutex);
 
 	/* configure the home LED */
-	if (nx_ctlr_type_has_right(ctlr)) {
-		name = devm_kasprintf(dev, GFP_KERNEL, "%s:%s:%s",
+	if (nx_ctlr_type_has_right_controls(ctlr)) {
+		name = devm_kasprintf(dev,
+				      GFP_KERNEL,
+				      "%s:%s:%s",
 				      d_name,
 				      "blue",
 				      LED_FUNCTION_PLAYER5);
@@ -2390,8 +2426,9 @@ static int nintendo_hid_probe(struct hid_device *hdev,
 
 	/* Initialize the controller */
 	mutex_lock(&ctlr->output_mutex);
+
 	/* if handshake command fails, assume ble pro controller */
-	if (nx_ctlr_uses_usb(ctlr) &&
+	if (nx_ctlr_device_uses_usb(ctlr) &&
 	    !nx_ctlr_send_usb(ctlr, NX_CTLR_USB_CMD_HANDSHAKE, HZ)) {
 		hid_dbg(hdev, "detected USB controller\n");
 		if ((ret = nx_ctlr_send_usb(ctlr, NX_CTLR_USB_CMD_BAUDRATE_3M, HZ))) {
@@ -2407,7 +2444,7 @@ static int nintendo_hid_probe(struct hid_device *hdev,
 		 * This doesn't send a response, so ignore the timeout.
 		 */
 		nx_ctlr_send_usb(ctlr, NX_CTLR_USB_CMD_NO_TIMEOUT, HZ/10);
-	} else if (nx_ctlr_type_is_chrggrip(ctlr)) {
+	} else if (nx_ctlr_device_is_chrggrip(ctlr)) {
 		hid_err(hdev, "Failed charging grip handshake\n");
 		ret = -ETIMEDOUT;
 		goto err_mutex;
@@ -2418,9 +2455,9 @@ static int nintendo_hid_probe(struct hid_device *hdev,
 		goto err_mutex;
 	}
 
-	if (!nx_ctlr_type_is_nescon(ctlr) &&
-	    !nx_ctlr_type_is_snescon(ctlr) &&
-	    !nx_ctlr_type_is_gencon(ctlr)) {
+	if (!nx_ctlr_type_is_any_nescon(ctlr) &&
+	    !nx_ctlr_device_is_snescon(ctlr) &&
+	    !nx_ctlr_device_is_gencon(ctlr)) {
 		if ((ret = nx_ctlr_request_calibration(ctlr))) {
 			/*
 			* We can function with default calibration, but it may be
