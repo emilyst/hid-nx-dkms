@@ -634,9 +634,7 @@ static void nx_ctlr_wait_for_input_report(struct nx_ctlr *ctlr)
 		spin_unlock_irqrestore(&ctlr->lock, flags);
 
 		/* We will still proceed, even with a timeout here */
-		if (!(ret = wait_event_timeout(ctlr->wait,
-					       ctlr->received_input_report,
-					       HZ / 4)))
+		if (!wait_event_timeout(ctlr->wait, ctlr->received_input_report, HZ / 4))
 			hid_warn(ctlr->hdev, "timeout waiting for input report\n");
 	}
 }
@@ -660,9 +658,7 @@ static void nx_ctlr_enforce_subcmd_rate(struct nx_ctlr *ctlr)
 	ctlr->last_subcmd_sent_msecs = current_ms;
 }
 
-static int nx_ctlr_hid_send_sync(struct nx_ctlr *ctlr,
-                                 u8 *data, size_t len,
-				 u32 timeout)
+static int nx_ctlr_hid_send_sync(struct nx_ctlr *ctlr, u8 *data, size_t len, u32 timeout)
 {
 	int ret;
 	int tries = 2;
@@ -679,9 +675,7 @@ static int nx_ctlr_hid_send_sync(struct nx_ctlr *ctlr,
 			return ret;
 		}
 
-		if (!(ret = wait_event_timeout(ctlr->wait,
-					       ctlr->received_resp,
-					       timeout))) {
+		if (!wait_event_timeout(ctlr->wait, ctlr->received_resp, timeout)) {
 			hid_dbg(ctlr->hdev,
 				"synchronous send/receive timed out\n");
 			if (tries) {
@@ -860,6 +854,7 @@ static int nx_ctlr_read_stick_calibration(struct nx_ctlr *ctlr,
 static const u16 DFLT_STICK_CAL_CEN = 2000;
 static const u16 DFLT_STICK_CAL_MAX = 3500;
 static const u16 DFLT_STICK_CAL_MIN = 500;
+
 static int nx_ctlr_request_calibration(struct nx_ctlr *ctlr)
 {
 	u16 left_stick_addr = NX_CTLR_CAL_FCT_DATA_LEFT_ADDR;
@@ -2470,7 +2465,7 @@ static int nintendo_hid_probe(struct hid_device *hdev,
 	if (!nx_ctlr_type_is_any_nescon(ctlr) &&
 	    !nx_ctlr_device_is_snescon(ctlr) &&
 	    !nx_ctlr_device_is_gencon(ctlr)) {
-		if ((ret = nx_ctlr_request_calibration(ctlr))) {
+		if (nx_ctlr_request_calibration(ctlr)) {
 			/*
 			* We can function with default calibration, but it may be
 			* inaccurate. Provide a warning, and continue on.
@@ -2478,7 +2473,7 @@ static int nintendo_hid_probe(struct hid_device *hdev,
 			hid_warn(hdev, "Analog stick positions may be inaccurate\n");
 		}
 
-		if ((ret = nx_ctlr_request_imu_calibration(ctlr))) {
+		if (nx_ctlr_request_imu_calibration(ctlr)) {
 			/*
 			* We can function with default calibration, but it may be
 			* inaccurate. Provide a warning, and continue on.
