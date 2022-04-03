@@ -2517,6 +2517,28 @@ static int nintendo_hid_probe(struct hid_device *hdev,
 	ctlr->ctlr_state = NX_CTLR_STATE_READ;
 
 	hid_dbg(hdev, "probe - success\n");
+
+	hid_dbg(hdev, "device_is_left_joycon   = %d\n", nx_ctlr_device_is_left_joycon(ctlr));
+	hid_dbg(hdev, "device_is_right_joycon  = %d\n", nx_ctlr_device_is_right_joycon(ctlr));
+	hid_dbg(hdev, "device_is_procon        = %d\n", nx_ctlr_device_is_procon(ctlr));
+	hid_dbg(hdev, "device_is_chrggrip      = %d\n", nx_ctlr_device_is_chrggrip(ctlr));
+	hid_dbg(hdev, "device_is_snescon       = %d\n", nx_ctlr_device_is_snescon(ctlr));
+	hid_dbg(hdev, "device_is_gencon        = %d\n", nx_ctlr_device_is_gencon(ctlr));
+	hid_dbg(hdev, "device_is_any_joycon    = %d\n", nx_ctlr_device_is_any_joycon(ctlr));
+	hid_dbg(hdev, "device_uses_usb         = %d\n", nx_ctlr_device_uses_usb(ctlr));
+	hid_dbg(hdev, "type_is_left_joycon     = %d\n", nx_ctlr_type_is_left_joycon(ctlr));
+	hid_dbg(hdev, "type_is_right_joycon    = %d\n", nx_ctlr_type_is_right_joycon(ctlr));
+	hid_dbg(hdev, "type_is_procon          = %d\n", nx_ctlr_type_is_procon(ctlr));
+	hid_dbg(hdev, "type_is_snescon         = %d\n", nx_ctlr_type_is_snescon(ctlr));
+	hid_dbg(hdev, "type_is_gencon          = %d\n", nx_ctlr_type_is_gencon(ctlr));
+	hid_dbg(hdev, "type_is_left_nescon     = %d\n", nx_ctlr_type_is_left_nescon(ctlr));
+	hid_dbg(hdev, "type_is_right_nescon    = %d\n", nx_ctlr_type_is_right_nescon(ctlr));
+	hid_dbg(hdev, "type_has_left_controls  = %d\n", nx_ctlr_type_has_left_controls(ctlr));
+	hid_dbg(hdev, "type_has_right_controls = %d\n", nx_ctlr_type_has_right_controls(ctlr));
+	hid_dbg(hdev, "type_is_any_joycon      = %d\n", nx_ctlr_type_is_any_joycon(ctlr));
+	hid_dbg(hdev, "type_is_any_nescon      = %d\n", nx_ctlr_type_is_any_nescon(ctlr));
+	hid_dbg(hdev, "uses_imu                = %d\n", nx_ctlr_uses_imu(ctlr));
+
 	return 0;
 
 err_mutex:
