@@ -27,9 +27,11 @@ This driver should be considered preliminary and not production-ready
 Installation
 ------------
 
-This driver can be installed from source on Linux using DKMS. Before
-installation, you should install the Linux kernel headers and DKMS
-support. Next, clone the source code.
+This driver can be installed from source on Linux using DKMS. If you're
+using Arch Linux, see the Package section below.
+
+Before installation, you should install DKMS support. Next, clone the
+source code.
 
     git clone https://github.com/emilyst/hid-nintendo
     cd hid-nintendo
@@ -37,8 +39,8 @@ support. Next, clone the source code.
 Then run the following commands as root or using `sudo`.
 
     dkms add .
-    dkms build hid-nintendo -v 1.2
-    dkms install hid-nintendo -v 1.2
+    dkms build hid-nintendo -v 1.3
+    dkms install hid-nintendo -v 1.3
 
 
 Uninstallation
@@ -47,9 +49,20 @@ Uninstallation
 To uninstall fully, run the following commands as root or using `sudo`.
 
     modprobe -r hid_nintendo
-    dkms uninstall -m hid-nintendo -v 1.2
-    dkms remove -m hid-nintendo -v 1.2
+    dkms uninstall -m hid-nintendo -v 1.3
+    dkms remove -m hid-nintendo -v 1.3
     rm -rf /usr/src/hid-nintendo-*
+
+
+Arch Linux package installation
+-------------------------------
+
+On Arch Linux, instead of installing from source, it is possible to
+build and install the module as a package. Run the following command
+without using root permissions. You will be asked to confirm the
+installation.
+
+    makepkg --clean --cleanbuild --syncdeps --install --force
 
 
 Attribution
@@ -62,10 +75,6 @@ This driver source code is derived from:
 It builds on changes from:
 
 * <https://github.com/nadiaholmquist/linux/tree/hid-nintendo>
-
-For DKMS support, I made reference to:
-
-* <https://github.com/nicman23/dkms-hid-nintendo>
 
 For more background on my NSO support as implemented, see:
 

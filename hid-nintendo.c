@@ -663,8 +663,6 @@ static int __nx_ctlr_hid_send(struct hid_device *hdev, u8 *data, size_t len)
 
 static void nx_ctlr_wait_for_input_report(struct nx_ctlr *ctlr)
 {
-	int ret;
-
 	/*
 	 * If we are in the proper reporting mode, wait for an input
 	 * report prior to sending the subcommand. This improves
