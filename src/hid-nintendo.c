@@ -809,11 +809,11 @@ static int nx_ctlr_check_for_cal_magic(struct nx_ctlr *ctlr, u32 flash_addr)
 						  &reply)))
 		return ret;
 
-	return reply[0] != NX_CTLR_CAL_USR_MAGIC_0 || 
+	return reply[0] != NX_CTLR_CAL_USR_MAGIC_0 ||
 	       reply[1] != NX_CTLR_CAL_USR_MAGIC_1;
 }
 
-static int nx_ctlr_read_stick_calibration(struct nx_ctlr *ctlr, 
+static int nx_ctlr_read_stick_calibration(struct nx_ctlr *ctlr,
 					  u16 cal_addr,
 					  struct nx_ctlr_stick_cal *cal_x,
 					  struct nx_ctlr_stick_cal *cal_y,
@@ -1375,7 +1375,7 @@ static void nx_ctlr_parse_report(struct nx_ctlr *ctlr,
 
 		x = nx_ctlr_map_stick_val(&ctlr->left_stick_cal_x, raw_x);
 		y = -nx_ctlr_map_stick_val(&ctlr->left_stick_cal_y, raw_y);
-		
+
 		input_report_abs(dev, ABS_X, x);
 		input_report_abs(dev, ABS_Y, y);
 
@@ -1427,10 +1427,10 @@ static void nx_ctlr_parse_report(struct nx_ctlr *ctlr,
 		/* get raw stick values */
 		raw_x = hid_field_extract(ctlr->hdev, rep->right_stick, 0, 12);
 		raw_y = hid_field_extract(ctlr->hdev, rep->right_stick + 1, 4, 12);
-		
+
 		x = nx_ctlr_map_stick_val(&ctlr->right_stick_cal_x, raw_x);
 		y = -nx_ctlr_map_stick_val(&ctlr->right_stick_cal_y, raw_y);
-		
+
 		input_report_abs(dev, ABS_RX, x);
 		input_report_abs(dev, ABS_RY, y);
 
@@ -1490,11 +1490,11 @@ static void nx_ctlr_parse_report(struct nx_ctlr *ctlr,
 			input_report_key(dev, BTN_TL2, btns & NX_CTLR_BTN_ZL);
 			input_report_key(dev, BTN_TR2, btns & NX_CTLR_BTN_ZR);
 		} else if (nx_ctlr_type_is_gencon(ctlr)) {
+			input_report_key(dev, BTN_SELECT, btns & NX_CTLR_BTN_ZR);
 			input_report_key(dev, BTN_START, btns & NX_CTLR_BTN_PLUS);
 			input_report_key(dev, BTN_EAST, btns & NX_CTLR_BTN_B);
 			input_report_key(dev, BTN_SOUTH, btns & NX_CTLR_BTN_A);
 			input_report_key(dev, BTN_C, btns & NX_CTLR_BTN_R);
-			input_report_key(dev, BTN_MODE, btns & NX_CTLR_BTN_ZR);
 		}
 	}
 
@@ -1760,11 +1760,11 @@ static const unsigned int snescon_button_inputs[] = {
 };
 
 static const unsigned int gencon_button_inputs[] = {
+	BTN_SELECT, 	/* "Mode" */
 	BTN_START,	/* "Start" */
 	BTN_EAST, 	/* "A" */
 	BTN_SOUTH,	/* "B" */
 	BTN_C,    	/* "C" */
-	BTN_MODE, 	/* "Mode" */
 	0         	/* 0 signals end of array */
 };
 
