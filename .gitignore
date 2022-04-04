@@ -7,4 +7,5 @@
 **/*.symvers
 **/*.order
 **/*.S
+**/*.zst
 .vscode
