@@ -1,8 +1,8 @@
 `hid-nintendo` Linux kernel driver with NSO controller support
 ==============================================================
 
-This repository contains the source code for the Linux kernel
-`hid-nintendo` input driver, with added support for Nintendo Switch
+This repository contains an alternative version of the Linux kernel
+`hid-nintendo` input driver, modified to add support for Nintendo Switch
 Online controllers.
 
 
