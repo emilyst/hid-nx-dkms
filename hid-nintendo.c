@@ -1525,7 +1525,8 @@ static void nx_ctlr_parse_report(struct nx_ctlr *ctlr, struct nx_ctlr_input_repo
 			input_report_key(dev, BTN_START, btns & NX_CTLR_BTN_PLUS);
 			input_report_key(dev, BTN_EAST, btns & NX_CTLR_BTN_B);
 			input_report_key(dev, BTN_SOUTH, btns & NX_CTLR_BTN_A);
-			input_report_key(dev, BTN_C, btns & NX_CTLR_BTN_R);
+			input_report_key(dev, BTN_WEST, btns & NX_CTLR_BTN_R);
+			input_report_key(dev, BTN_MODE, btns & NX_CTLR_BTN_HOME);
 		}
 	}
 
@@ -1786,13 +1787,22 @@ static const unsigned int snescon_button_inputs[] = {
 	0          	/* 0 signals end of array */
 };
 
+/*
+ * Note: Button order is determined by the numerical order of the constants (see
+ * `uapi/linux/input-event-codes.h`).
+ *
+ * A, B, and C are mapped positionally, rather than by label (e.g., "A" gets
+ * assigned to BTN_EAST instead of BTN_A).
+ */
 static const unsigned int gencon_button_inputs[] = {
-	BTN_SELECT, 	/* "Mode" */
+	BTN_SELECT,	/* "Mode" */
 	BTN_START,	/* "Start" */
-	BTN_EAST, 	/* "A" */
+	BTN_EAST,	/* "A" */
 	BTN_SOUTH,	/* "B" */
-	BTN_C,    	/* "C" */
-	0         	/* 0 signals end of array */
+	BTN_WEST,	/* "C" */
+	BTN_MODE,	/* Home */
+	/* BTN_???,	/* Capture */
+	0		/* 0 signals end of array */
 };
 
 static int nx_ctlr_input_create(struct nx_ctlr *ctlr)
