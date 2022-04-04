@@ -1576,10 +1576,9 @@ static int nx_ctlr_send_rumble_data(struct nx_ctlr *ctlr)
 
 	nx_ctlr_enforce_subcmd_rate(ctlr);
 
-	ret = __nx_ctlr_hid_send(ctlr->hdev,
-				 (u8 *)&rumble_output,
-				 sizeof(rumble_output));
-	return ret;
+	return __nx_ctlr_hid_send(ctlr->hdev,
+				  (u8 *)&rumble_output,
+				  sizeof(rumble_output));
 }
 
 static void nx_ctlr_rumble_worker(struct work_struct *work)
@@ -1765,26 +1764,26 @@ static const unsigned int nx_ctlr_dpad_inputs_jc[] = {
 
 static const unsigned int nescon_button_inputs[] = {
 	BTN_SELECT,	/* "Select" */
-	BTN_START, 	/* "Start" */
-	BTN_SOUTH, 	/* "B" */
-	BTN_EAST,  	/* "A" */
-	BTN_TL,    	/* "L" */
-	BTN_TR,    	/* "R" */
-	0          	/* 0 signals end of array */
+	BTN_START,	/* "Start" */
+	BTN_SOUTH,	/* "B" */
+	BTN_EAST,	/* "A" */
+	BTN_TL,		/* "L" */
+	BTN_TR,		/* "R" */
+	0		/* 0 signals end of array */
 };
 
 static const unsigned int snescon_button_inputs[] = {
 	BTN_SELECT,	/* "Select" */
-	BTN_START, 	/* "Start" */
-	BTN_SOUTH, 	/* "B" */
-	BTN_EAST,  	/* "A" */
-	BTN_NORTH, 	/* "X" */
-	BTN_WEST,  	/* "Y" */
-	BTN_TL,    	/* "L" */
-	BTN_TL2,   	/* "ZL" */
-	BTN_TR,    	/* "R" */
-	BTN_TR2,   	/* "ZR" */
-	0          	/* 0 signals end of array */
+	BTN_START,	/* "Start" */
+	BTN_SOUTH,	/* "B" */
+	BTN_EAST,	/* "A" */
+	BTN_NORTH,	/* "X" */
+	BTN_WEST,	/* "Y" */
+	BTN_TL,		/* "L" */
+	BTN_TL2,	/* "ZL" */
+	BTN_TR,		/* "R" */
+	BTN_TR2,	/* "ZR" */
+	0		/* 0 signals end of array */
 };
 
 /*
@@ -1925,9 +1924,7 @@ static int nx_ctlr_input_create(struct nx_ctlr *ctlr)
 
 		/* set up buttons */
 		for (i = 0; nescon_button_inputs[i] > 0; i++)
-			input_set_capability(ctlr->input,
-					     EV_KEY,
-					     nescon_button_inputs[i]);
+			input_set_capability(ctlr->input, EV_KEY, nescon_button_inputs[i]);
 
 		/* register the device here, we don't need any more setup */
 		if ((ret = input_register_device(ctlr->input)))
@@ -1942,9 +1939,7 @@ static int nx_ctlr_input_create(struct nx_ctlr *ctlr)
 
 		/* set up buttons */
 		for (i = 0; snescon_button_inputs[i] > 0; i++)
-			input_set_capability(ctlr->input,
-					     EV_KEY,
-					     snescon_button_inputs[i]);
+			input_set_capability(ctlr->input, EV_KEY, snescon_button_inputs[i]);
 
 		/* register the device here, we don't need any more setup */
 		if ((ret = input_register_device(ctlr->input)))
@@ -1959,9 +1954,7 @@ static int nx_ctlr_input_create(struct nx_ctlr *ctlr)
 
 		/* set up buttons */
 		for (i = 0; gencon_button_inputs[i] > 0; i++)
-			input_set_capability(ctlr->input,
-					     EV_KEY,
-					     gencon_button_inputs[i]);
+			input_set_capability(ctlr->input, EV_KEY, gencon_button_inputs[i]);
 
 		/* register the device here, we don't need any more setup */
 		if ((ret = input_register_device(ctlr->input)))
