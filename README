@@ -65,6 +65,12 @@ installation.
     makepkg --clean --cleanbuild --syncdeps --install --force
 
 
+Planned
+-------
+
+* Possibly rename module to avoid confusion and clarify scope
+* Other significant refactors to break apart longer functions
+
 Attribution
 -----------
 
