@@ -2,7 +2,7 @@
 
 _pkgbase=hid-nintendo-dkms
 pkgname=hid-nintendo-dkms
-pkgver=v1.3
+pkgver=v1.4
 pkgrel=1
 pkgdesc='Nintendo Switch HID driver with NSO controller support'
 url=https://github.com/emilyst/hid-nintendo
@@ -18,9 +18,9 @@ source=(
   dkms.conf
 )
 b2sums=('e638a74c624cb218a21509e8194f02c34254ec2fcd9a740574f2a2f28fe3ef14691e654514cb05b52f94e49aedcdb0583ee1525bb896650f514fb85aafbb34e1'
-        '0424ac9a5e8ca64ede2b446e238b5935c8afb50f82388d23b96376b9c167dc356a76cb20c71c2ad073abb44080cbcc5cfe4e29ed2443670ae19aa8e1c93a9ef2'
+        '1269c21aa7740c3e10ba24809d78b97f96f9dbe17abb187fff91904b4909857af6de1b1d03492daedaec1a2bb3731b6cd6975f79685ae9123096c1e24e64d6df'
         '97e86380aa58ab564a8b03c00610fff66067634f5e31055f90e96ed840ca7bb0ea678cf7ddbf650f4f7b29993ba05c8958680f75db498fec673e89d8b06e7871'
-        '4ef5422163176e926ffdc3824639eb7cd60297bc5bcafebc035fc71806462dace993ea092cabe6986d62768cfdb7fd29d252a78274084c5afbe22f2ca6ef2dc0')
+        'ab98c9caaff81a1b6fefbda5d6552b862bf8ecc9d97c5f7cde675e45d27bc09c2fc23a686b829a59ed00b10dfb0e0c7fec78bcddc296ba5337d625806ced7f0d')
 
 pkgver() {
   git describe --long --tags | sed 's/\([^-]*-g\)/r\1/;s/-/./g'
