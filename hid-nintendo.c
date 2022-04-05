@@ -1800,7 +1800,7 @@ static const unsigned int gencon_button_inputs[] = {
 	BTN_SOUTH,	/* "B" */
 	BTN_WEST,	/* "C" */
 	BTN_MODE,	/* Home */
-	/* BTN_???,	/* Capture */
+	/* BTN_???, */	/* Capture */
 	0		/* 0 signals end of array */
 };
 
