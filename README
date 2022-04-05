@@ -68,8 +68,12 @@ installation.
 Planned
 -------
 
-* Possibly rename module to avoid confusion and clarify scope
 * Other significant refactors to break apart longer functions
+* Possibly rename module to avoid confusion and clarify scope
+* Possible ideas from linux-rt:
+  * Replace kernel spinlocks with mutexes that support priority
+    inheritance
+  * Move all interrupt and software interrupts to kernel threads
 
 Attribution
 -----------
