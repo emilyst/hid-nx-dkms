@@ -6,6 +6,13 @@ This repository contains an alternative version of the Linux kernel
 Online controllers.
 
 
+Status
+------
+
+This driver should be considered beta-quality and not production-ready
+(for whatever value of "production" applies to Nintendo controllers).
+
+
 Supported controllers
 ---------------------
 
@@ -15,13 +22,6 @@ Supported controllers
   * <https://www.nintendo.com/store/products/nintendo-entertainment-system-controllers/>
 * Sega Genesis control pad
   * <https://www.nintendo.com/store/products/sega-genesis-control-pad/>
-
-
-Status
-------
-
-This driver should be considered beta-quality and not production-ready
-(for whatever value of "production" applies to Nintendo controllers).
 
 
 Installation
