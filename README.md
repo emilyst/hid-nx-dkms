@@ -15,7 +15,9 @@ Source
 Status
 ------
 
-This driver should be considered beta-quality and not production-ready (for whatever value of "production" applies to Nintendo controllers).
+This driver should be considered experimental.
+
+It ought to be stable enough for day-to-day use, and it maintains compatbility for the Nintendo Switch Joy-Cons and Pro Controller. However, its various features, inputs, device names, and so on may still be subject to change.
 
 
 Supported controllers

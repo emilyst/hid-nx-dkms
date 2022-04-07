@@ -2,7 +2,7 @@
 
 _pkgbase=hid-nintendo-dkms
 pkgname=hid-nintendo-dkms
-pkgver=v1.4
+pkgver=v1.4.r1.gb755970
 pkgrel=1
 pkgdesc='Nintendo Switch HID driver with NSO controller support'
 url=https://github.com/emilyst/hid-nintendo
