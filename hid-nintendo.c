@@ -1683,9 +1683,9 @@ static void nx_con_clamp_rumble_freqs(struct nx_con *con)
 }
 
 static int nx_con_set_rumble(struct nx_con *con,
-			      u16 amp_r,
-			      u16 amp_l,
-			      bool schedule_now)
+			     u16 amp_r,
+			     u16 amp_l,
+			     bool schedule_now)
 {
 	u8 data[NX_CON_RUMBLE_DATA_SIZE];
 	u16 amp;
