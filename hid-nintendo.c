@@ -1806,55 +1806,22 @@ static const unsigned int gencon_button_inputs[] = {
 static int nx_con_input_create(struct nx_con *con)
 {
 	struct hid_device *hdev;
-	const char *name;
 	const char *imu_name;
 	int ret;
 	int i;
 
 	hdev = con->hdev;
 
-	if (nx_con_device_is_procon(con)) {
-		name = "Nintendo Switch Pro Controller";
-		imu_name = "Nintendo Switch Pro Controller IMU";
-	} else if (nx_con_device_is_chrggrip(con)) {
-		if (nx_con_type_has_left_controls(con)) {
-			name = "Nintendo Switch Left Joy-Con (Grip)";
-			imu_name = "Nintendo Switch Left Joy-Con IMU (Grip)";
-		} else {
-			name = "Nintendo Switch Right Joy-Con (Grip)";
-			imu_name = "Nintendo Switch Right Joy-Con IMU (Grip)";
-		}
-	} else if (nx_con_type_is_left_joycon(con)) {
-		name = "Nintendo Switch Left Joy-Con";
-		imu_name = "Nintendo Switch Left Joy-Con IMU";
-	} else if (nx_con_type_is_right_joycon(con)) {
-		name = "Nintendo Switch Right Joy-Con";
-		imu_name = "Nintendo Switch Right Joy-Con IMU";
-	} else if (nx_con_type_is_left_nescon(con)) {
-		name = "Nintendo Controller for Nintendo Switch Online (L)";
-		imu_name = NULL;
-	} else if (nx_con_type_is_right_nescon(con)) {
-		name = "Nintendo Controller for Nintendo Switch Online (R)";
-		imu_name = NULL;
-	} else if (nx_con_type_is_snescon(con)) {
-		name = "Super Nintendo Controller for Nintendo Switch Online";
-		imu_name = NULL;
-	} else if (nx_con_type_is_gencon(con)) {
-		name = "SEGA Genesis Control Pad for Nintendo Switch Online";
-		imu_name = NULL;
-	} else {
-		hid_err(hdev, "Invalid device\n");
-		return -EINVAL;
-	}
-
 	if (!(con->input = devm_input_allocate_device(&hdev->dev)))
 		return -ENOMEM;
+
 	con->input->id.bustype = hdev->bus;
 	con->input->id.vendor = hdev->vendor;
 	con->input->id.product = hdev->product;
 	con->input->id.version = hdev->version;
+	con->input->name = hdev->name;
 	con->input->uniq = con->mac_addr_str;
-	con->input->name = name;
+
 	input_set_drvdata(con->input, con);
 
 	/* set up sticks and buttons */
@@ -1996,7 +1963,13 @@ static int nx_con_input_create(struct nx_con *con)
 	con->imu_input->id.product = hdev->product;
 	con->imu_input->id.version = hdev->version;
 	con->imu_input->uniq = con->mac_addr_str;
+
+	imu_name = devm_kasprintf(&hdev->dev, GFP_KERNEL, "%s (IMU)", con->input->name);
+	if (!imu_name)
+		return -ENOMEM;
+
 	con->imu_input->name = imu_name;
+
 	input_set_drvdata(con->imu_input, con);
 
 	/* configure imu axes */
