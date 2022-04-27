@@ -609,8 +609,7 @@ static inline bool nx_con_type_is_right_nescon(struct nx_con *con)
 static inline bool nx_con_type_has_left_controls(struct nx_con *con)
 {
 	return nx_con_type_is_left_joycon(con) ||
-	       nx_con_type_is_procon(con) ||
-	       nx_con_type_is_n64con(con);
+	       nx_con_type_is_procon(con);
 }
 
 static inline bool nx_con_type_has_right_controls(struct nx_con *con)
@@ -1494,22 +1493,52 @@ static void nx_con_parse_report(struct nx_con *con, struct nx_con_input_report *
 	}
 
 	if (nx_con_type_is_n64con(con)) {
+		u16 raw_x;
+		u16 raw_y;
+		s32 x;
+		s32 y;
+		int hatx = 0;
+		int haty = 0;
+
+		/* d-pad x */
+		if (btns & NX_CON_BTN_LEFT)
+			hatx = -1;
+		else if (btns & NX_CON_BTN_RIGHT)
+			hatx = 1;
+		input_report_abs(dev, ABS_HAT0X, hatx);
+
+		/* d-pad y */
+		if (btns & NX_CON_BTN_UP)
+			haty = -1;
+		else if (btns & NX_CON_BTN_DOWN)
+			haty = 1;
+		input_report_abs(dev, ABS_HAT0Y, haty);
+
+		raw_x = hid_field_extract(con->hdev, rep->left_stick, 0, 12);
+		raw_y = hid_field_extract(con->hdev, rep->left_stick + 1, 4, 12);
+
+		x = nx_con_map_stick_val(&con->left_stick_cal_x, raw_x);
+		y = -nx_con_map_stick_val(&con->left_stick_cal_y, raw_y);
+
+		input_report_abs(dev, ABS_X, x);
+		input_report_abs(dev, ABS_Y, y);
+
 		input_report_key(dev, BTN_START, btns & NX_CON_BTN_PLUS);
 		input_report_key(dev, BTN_B, btns & NX_CON_BTN_B);
 		input_report_key(dev, BTN_A, btns & NX_CON_BTN_A);
 		input_report_key(dev, BTN_Z, btns & NX_CON_BTN_ZL);
 
 		/* C buttons */
-		input_report_key(dev, BTN_0, btns & NX_CON_BTN_Y);
-		input_report_key(dev, BTN_1, btns & NX_CON_BTN_ZR);
-		input_report_key(dev, BTN_2, btns & NX_CON_BTN_X);
-		input_report_key(dev, BTN_3, btns & NX_CON_BTN_MINUS);
+		input_report_key(dev, BTN_DPAD_UP, btns & NX_CON_BTN_Y);
+		input_report_key(dev, BTN_DPAD_DOWN, btns & NX_CON_BTN_ZR);
+		input_report_key(dev, BTN_DPAD_LEFT, btns & NX_CON_BTN_X);
+		input_report_key(dev, BTN_DPAD_RIGHT, btns & NX_CON_BTN_MINUS);
 
 		input_report_key(dev, BTN_TL, btns & NX_CON_BTN_L);
 		input_report_key(dev, BTN_TR, btns & NX_CON_BTN_R);
 		input_report_key(dev, BTN_TR2, btns & NX_CON_BTN_LSTICK);
-		input_report_key(dev, BTN_4, btns & NX_CON_BTN_HOME);
-		input_report_key(dev, BTN_5, btns & NX_CON_BTN_CAP);
+		input_report_key(dev, BTN_0, btns & NX_CON_BTN_HOME);
+		input_report_key(dev, BTN_1, btns & NX_CON_BTN_CAP);
 	}
 
 	if (nx_con_type_is_any_nescon(con) ||
@@ -1839,16 +1868,16 @@ static const unsigned int n64con_button_inputs[] = {
 	BTN_START,	/* "Start" */
 	BTN_B,		/* "B" */
 	BTN_A,		/* "A" */
-	BTN_0,		/* "C" up */
-	BTN_1,		/* "C" down */
-	BTN_2,		/* "C" left */
-	BTN_3,		/* "C" right */
+	BTN_DPAD_UP,	/* "C" up */
+	BTN_DPAD_DOWN,	/* "C" down */
+	BTN_DPAD_LEFT,	/* "C" left */
+	BTN_DPAD_RIGHT,	/* "C" right */
 	BTN_Z,		/* "Z" */
 	BTN_TL,		/* "L" */
 	BTN_TR,		/* "R" */
 	BTN_TR2,	/* "ZR" */
-	BTN_4,		/* "Home" */
-	BTN_5,		/* "Capture" */
+	BTN_0,		/* "Home" */
+	BTN_1,		/* "Capture" */
 	0		/* 0 signals end of array */
 };
 
