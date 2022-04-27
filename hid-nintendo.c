@@ -1495,6 +1495,26 @@ static void nx_con_parse_report(struct nx_con *con, struct nx_con_input_report *
 		input_report_key(dev, BTN_EAST, btns & NX_CON_BTN_A);
 		input_report_key(dev, BTN_SOUTH, btns & NX_CON_BTN_B);
 	}
+
+	if (nx_con_type_is_n64con(con)) {
+		input_report_key(dev, BTN_START, btns & NX_CON_BTN_PLUS);
+		input_report_key(dev, BTN_B, btns & NX_CON_BTN_B);
+		input_report_key(dev, BTN_A, btns & NX_CON_BTN_A);
+		input_report_key(dev, BTN_Z, btns & NX_CON_BTN_ZL);
+
+		/* C buttons */
+		input_report_key(dev, BTN_0, btns & NX_CON_BTN_Y);
+		input_report_key(dev, BTN_1, btns & NX_CON_BTN_ZR);
+		input_report_key(dev, BTN_2, btns & NX_CON_BTN_X);
+		input_report_key(dev, BTN_3, btns & NX_CON_BTN_MINUS);
+
+		input_report_key(dev, BTN_TL, btns & NX_CON_BTN_L);
+		input_report_key(dev, BTN_TR, btns & NX_CON_BTN_R);
+		input_report_key(dev, BTN_TR2, btns & NX_CON_BTN_LSTICK);
+		input_report_key(dev, BTN_4, btns & NX_CON_BTN_HOME);
+		input_report_key(dev, BTN_5, btns & NX_CON_BTN_CAP);
+	}
+
 	if (nx_con_type_is_any_nescon(con) ||
 	    nx_con_type_is_snescon(con) ||
 	    nx_con_type_is_gencon(con)) {
@@ -1818,6 +1838,23 @@ static const unsigned int gencon_button_inputs[] = {
 	0		/* 0 signals end of array */
 };
 
+static const unsigned int n64con_button_inputs[] = {
+	BTN_START,	/* "Start" */
+	BTN_B,		/* "B" */
+	BTN_A,		/* "A" */
+	BTN_0,		/* "C" up */
+	BTN_1,		/* "C" down */
+	BTN_2,		/* "C" left */
+	BTN_3,		/* "C" right */
+	BTN_Z,		/* "Z" */
+	BTN_TL,		/* "L" */
+	BTN_TR,		/* "R" */
+	BTN_TR2,	/* "ZR" */
+	BTN_4,		/* "Home" */
+	BTN_5,		/* "Capture" */
+	0		/* 0 signals end of array */
+};
+
 static int nx_con_input_create(struct nx_con *con)
 {
 	struct hid_device *hdev;
@@ -1942,6 +1979,26 @@ static int nx_con_input_create(struct nx_con *con)
 			return ret;
 
 		return 0;
+	}
+	if (nx_con_type_is_n64con(con)) {
+		input_set_abs_params(con->input, ABS_HAT0X, -1, 1, 0, 0);
+		input_set_abs_params(con->input, ABS_HAT0Y, -1, 1, 0, 0);
+
+		input_set_abs_params(con->input,
+				     ABS_X,
+				     -NX_CON_MAX_STICK_MAG,
+				     NX_CON_MAX_STICK_MAG,
+				     NX_CON_STICK_FUZZ,
+				     NX_CON_STICK_FLAT);
+		input_set_abs_params(con->input,
+				     ABS_Y,
+				     -NX_CON_MAX_STICK_MAG,
+				     NX_CON_MAX_STICK_MAG,
+				     NX_CON_STICK_FUZZ,
+				     NX_CON_STICK_FLAT);
+
+		for (i = 0; n64con_button_inputs[i] > 0; i++)
+			input_set_capability(con->input, EV_KEY, n64con_button_inputs[i]);
 	}
 
 	/* Let's report joy-con S triggers separately */
