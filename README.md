@@ -26,6 +26,7 @@ Supported controllers
 * [SNES controller]
 * [NES controller]
 * [Sega Genesis control pad]
+* [Nintendo 64 controller]
 
 
 Installation
@@ -47,8 +48,8 @@ Next, clone the source code.
 Then run the following commands as root or using `sudo`.
 
     dkms add .
-    dkms build hid-nintendo -v 1.5
-    dkms install hid-nintendo -v 1.5
+    dkms build hid-nintendo -v 1.6
+    dkms install hid-nintendo -v 1.6
 
 Once installed, this driver replaces the native `hid-nintendo` driver. No other configuration should be necessary.
 
@@ -63,8 +64,8 @@ Uninstallation
 To remove fully, run the following commands as root or using `sudo`.
 
     modprobe -r hid_nintendo
-    dkms uninstall -m hid-nintendo -v 1.5
-    dkms remove -m hid-nintendo -v 1.5
+    dkms uninstall -m hid-nintendo -v 1.6
+    dkms remove -m hid-nintendo -v 1.6
     rm -rf /usr/src/hid-nintendo-*
 
 
@@ -102,6 +103,14 @@ After that, I extended this support to the Sega Genesis gamepad and [proposed it
 
 Once I saw there were more changes I wanted to make, I decided to share them as a separate out-of-tree kernel driver instead.
 
+Along with Sega Genesis gamepad support, I've also added support for the Nintendo 64 controller for Nintendo Switch Online.
+
+
+Future
+------
+
+It's likely that in the future I will attempt to rename this driver so as to distinguish it from the in-kernel one. There are also numerous refactors I have in mind.
+
 
 License
 -------
@@ -133,6 +142,7 @@ License
 [SNES controller]: https://www.nintendo.com/store/products/super-nintendo-entertainment-system-controller/
 [NES controller]: https://www.nintendo.com/store/products/nintendo-entertainment-system-controllers/
 [Sega Genesis control pad]: https://www.nintendo.com/store/products/sega-genesis-control-pad/
+[Nintendo 64 controller]: https://www.nintendo.com/store/products/nintendo-64-controller/
 [the DKMS Arch Linux documentation]: https://wiki.archlinux.org/title/Dynamic_Kernel_Module_Support
 [`joycond`]: https://github.com/DanielOgorchock/joycond
 [from the Arch Linux User Repository]: https://aur.archlinux.org/packages/joycond-git
