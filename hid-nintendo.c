@@ -317,6 +317,7 @@ enum nx_con_type {
 	NX_CON_TYPE_NESR	= 0x0A,
 	NX_CON_TYPE_SNES	= 0x0B,
 	NX_CON_TYPE_GEN		= 0x0D,
+	NX_CON_TYPE_N64		= 0x0C,
 };
 
 struct nx_con_stick_cal {
