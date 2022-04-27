@@ -734,8 +734,7 @@ static int nx_con_hid_send_sync(struct nx_con *con, u8 *data, size_t len, u32 ti
 		}
 
 		if (!wait_event_timeout(con->wait, con->received_resp, timeout)) {
-			hid_dbg(con->hdev,
-				"synchronous send/receive timed out\n");
+			hid_dbg(con->hdev, "synchronous send/receive timed out\n");
 			if (tries) {
 				hid_dbg(con->hdev, "retrying sync send after timeout\n");
 			}
@@ -1027,12 +1026,10 @@ static int nx_con_request_imu_calibration(struct nx_con *con)
 
 	hid_dbg(con->hdev, "requesting IMU cal data\n");
 	if ((ret = nx_con_request_spi_flash_read(con,
-						  imu_cal_addr,
-						  NX_CON_IMU_CAL_DATA_SIZE,
-						  &raw_cal))) {
-		hid_warn(con->hdev,
-			 "Failed to read IMU cal, using defaults; ret=%d\n",
-			 ret);
+						 imu_cal_addr,
+						 NX_CON_IMU_CAL_DATA_SIZE,
+						 &raw_cal))) {
+		hid_warn(con->hdev, "Failed to read IMU cal, using defaults; ret=%d\n", ret);
 
 		for (i = 0; i < 3; i++) {
 			con->accel_cal.offset[i] = DFLT_ACCEL_OFFSET;
@@ -1892,15 +1889,12 @@ static int nx_con_input_create(struct nx_con *con)
 				     NX_CON_STICK_FLAT);
 
 		for (i = 0; nx_con_button_inputs_l[i] > 0; i++)
-			input_set_capability(con->input, EV_KEY,
-					     nx_con_button_inputs_l[i]);
+			input_set_capability(con->input, EV_KEY, nx_con_button_inputs_l[i]);
 
 		/* configure d-pad differently for joy-con vs pro controller */
 		if (!(nx_con_device_is_procon(con))) {
 			for (i = 0; nx_con_dpad_inputs_jc[i] > 0; i++)
-				input_set_capability(con->input,
-						     EV_KEY,
-						     nx_con_dpad_inputs_jc[i]);
+				input_set_capability(con->input, EV_KEY, nx_con_dpad_inputs_jc[i]);
 		} else {
 			input_set_abs_params(con->input,
 					     ABS_HAT0X,
@@ -1931,9 +1925,7 @@ static int nx_con_input_create(struct nx_con *con)
 				     NX_CON_STICK_FLAT);
 
 		for (i = 0; nx_con_button_inputs_r[i] > 0; i++)
-			input_set_capability(con->input,
-					     EV_KEY,
-					     nx_con_button_inputs_r[i]);
+			input_set_capability(con->input, EV_KEY, nx_con_button_inputs_r[i]);
 	}
 	if (nx_con_type_is_any_nescon(con)) {
 		/* set up dpad hat */
@@ -2508,23 +2500,26 @@ static int nintendo_hid_probe(struct hid_device *hdev,
 	mutex_lock(&con->output_mutex);
 
 	/* if handshake command fails, assume ble pro controller */
-	if (nx_con_device_has_usb(con) &&
-	    !nx_con_send_usb(con, NX_CON_USB_CMD_HANDSHAKE, HZ)) {
+	if (nx_con_device_has_usb(con) && !nx_con_send_usb(con, NX_CON_USB_CMD_HANDSHAKE, HZ)) {
 		hid_dbg(hdev, "detected USB controller\n");
 
+		hid_dbg(hdev, "setting USB baud rate\n");
 		if ((ret = nx_con_send_usb(con, NX_CON_USB_CMD_BAUDRATE_3M, HZ))) {
 			hid_err(hdev, "Failed to set baudrate; ret=%d\n", ret);
 			goto err_mutex;
 		}
 
+		hid_dbg(hdev, "sending USB handshake\n");
 		if ((ret = nx_con_send_usb(con, NX_CON_USB_CMD_HANDSHAKE, HZ))) {
 			hid_err(hdev, "Failed handshake; ret=%d\n", ret);
 			goto err_mutex;
 		}
+
 		/*
 		 * Set no timeout (to keep controller in USB mode).
 		 * This doesn't send a response, so ignore the timeout.
 		 */
+		hid_dbg(hdev, "disabling USB timeout\n");
 		nx_con_send_usb(con, NX_CON_USB_CMD_NO_TIMEOUT, HZ/10);
 	} else if (nx_con_device_is_chrggrip(con)) {
 		hid_err(hdev, "Failed charging grip handshake\n");
