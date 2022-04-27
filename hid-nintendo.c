@@ -532,6 +532,11 @@ static inline bool nx_con_device_is_gencon(struct nx_con *con)
 	return con->hdev->product == USB_DEVICE_ID_NINTENDO_GENCON;
 }
 
+static inline bool nx_con_device_is_n64con(struct nx_con *con)
+{
+	return con->hdev->product == USB_DEVICE_ID_NINTENDO_N64CON;
+}
+
 static inline bool nx_con_device_is_any_joycon(struct nx_con *con)
 {
 	return nx_con_device_is_right_joycon(con) ||
@@ -544,7 +549,8 @@ static inline bool nx_con_device_has_usb(struct nx_con *con)
 	return nx_con_device_is_procon(con) ||
 	       nx_con_device_is_chrggrip(con) ||
 	       nx_con_device_is_snescon(con) ||
-	       nx_con_device_is_gencon(con);
+	       nx_con_device_is_gencon(con) ||
+	       nx_con_device_is_n64con(con);
 }
 
 /*
@@ -585,6 +591,11 @@ static inline bool nx_con_type_is_gencon(struct nx_con *con)
 	return con->type == NX_CON_TYPE_GEN;
 }
 
+static inline bool nx_con_type_is_n64con(struct nx_con *con)
+{
+	return con->type == NX_CON_TYPE_N64;
+}
+
 static inline bool nx_con_type_is_left_nescon(struct nx_con *con)
 {
 	return con->type == NX_CON_TYPE_NESL;
@@ -598,7 +609,8 @@ static inline bool nx_con_type_is_right_nescon(struct nx_con *con)
 static inline bool nx_con_type_has_left_controls(struct nx_con *con)
 {
 	return nx_con_type_is_left_joycon(con) ||
-	       nx_con_type_is_procon(con);
+	       nx_con_type_is_procon(con) ||
+	       nx_con_type_is_n64con(con);
 }
 
 static inline bool nx_con_type_has_right_controls(struct nx_con *con)
@@ -638,14 +650,16 @@ static inline bool nx_con_has_joysticks(struct nx_con *con)
 {
 	return nx_con_device_is_chrggrip(con) ||
 	       nx_con_type_is_any_joycon(con) ||
-	       nx_con_type_is_procon(con);
+	       nx_con_type_is_procon(con) ||
+	       nx_con_type_is_n64con(con);
 }
 
 static inline bool nx_con_has_rumble(struct nx_con *con)
 {
 	return nx_con_device_is_chrggrip(con) ||
 	       nx_con_type_is_any_joycon(con) ||
-	       nx_con_type_is_procon(con);
+	       nx_con_type_is_procon(con) ||
+	       nx_con_type_is_n64con(con);
 }
 
 static int __nx_con_hid_send(struct hid_device *hdev, u8 *data, size_t len)
