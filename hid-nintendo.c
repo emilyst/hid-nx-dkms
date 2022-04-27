@@ -1954,91 +1954,93 @@ static int nx_con_input_create(struct nx_con *con)
 	}
 
 #if IS_ENABLED(CONFIG_NINTENDO_FF)
-	/* set up rumble */
-	input_set_capability(con->input, EV_FF, FF_RUMBLE);
-	input_ff_create_memless(con->input, NULL, nx_con_play_effect);
-	con->rumble_ll_freq = NX_CON_RUMBLE_DFLT_LOW_FREQ;
-	con->rumble_lh_freq = NX_CON_RUMBLE_DFLT_HIGH_FREQ;
-	con->rumble_rl_freq = NX_CON_RUMBLE_DFLT_LOW_FREQ;
-	con->rumble_rh_freq = NX_CON_RUMBLE_DFLT_HIGH_FREQ;
-	nx_con_clamp_rumble_freqs(con);
-	nx_con_set_rumble(con, 0, 0, false);
-	con->rumble_msecs = jiffies_to_msecs(jiffies);
+	if (nx_con_has_rumble(con)) {
+		input_set_capability(con->input, EV_FF, FF_RUMBLE);
+		input_ff_create_memless(con->input, NULL, nx_con_play_effect);
+		con->rumble_ll_freq = NX_CON_RUMBLE_DFLT_LOW_FREQ;
+		con->rumble_lh_freq = NX_CON_RUMBLE_DFLT_HIGH_FREQ;
+		con->rumble_rl_freq = NX_CON_RUMBLE_DFLT_LOW_FREQ;
+		con->rumble_rh_freq = NX_CON_RUMBLE_DFLT_HIGH_FREQ;
+		nx_con_clamp_rumble_freqs(con);
+		nx_con_set_rumble(con, 0, 0, false);
+		con->rumble_msecs = jiffies_to_msecs(jiffies);
+	}
 #endif
 
 	if ((ret = input_register_device(con->input)))
 		return ret;
 
-	/* configure the imu input device */
-	if (!(con->imu_input = devm_input_allocate_device(&hdev->dev)))
-		return -ENOMEM;
+	if (nx_con_has_imu(con)) {
+		if (!(con->imu_input = devm_input_allocate_device(&hdev->dev)))
+			return -ENOMEM;
 
-	con->imu_input->id.bustype = hdev->bus;
-	con->imu_input->id.vendor = hdev->vendor;
-	con->imu_input->id.product = hdev->product;
-	con->imu_input->id.version = hdev->version;
-	con->imu_input->uniq = con->mac_addr_str;
+		con->imu_input->id.bustype = hdev->bus;
+		con->imu_input->id.vendor = hdev->vendor;
+		con->imu_input->id.product = hdev->product;
+		con->imu_input->id.version = hdev->version;
+		con->imu_input->uniq = con->mac_addr_str;
 
-	imu_name = devm_kasprintf(&hdev->dev, GFP_KERNEL, "%s (IMU)", con->input->name);
-	if (!imu_name)
-		return -ENOMEM;
+		imu_name = devm_kasprintf(&hdev->dev, GFP_KERNEL, "%s (IMU)", con->input->name);
+		if (!imu_name)
+			return -ENOMEM;
 
-	con->imu_input->name = imu_name;
+		con->imu_input->name = imu_name;
 
-	input_set_drvdata(con->imu_input, con);
+		input_set_drvdata(con->imu_input, con);
 
-	/* configure imu axes */
-	input_set_abs_params(con->imu_input,
-			     ABS_X,
-			     -NX_CON_IMU_MAX_ACCEL_MAG,
-			     NX_CON_IMU_MAX_ACCEL_MAG,
-			     NX_CON_IMU_ACCEL_FUZZ,
-			     NX_CON_IMU_ACCEL_FLAT);
-	input_set_abs_params(con->imu_input,
-			     ABS_Y,
-			     -NX_CON_IMU_MAX_ACCEL_MAG,
-			     NX_CON_IMU_MAX_ACCEL_MAG,
-			     NX_CON_IMU_ACCEL_FUZZ,
-			     NX_CON_IMU_ACCEL_FLAT);
-	input_set_abs_params(con->imu_input,
-			     ABS_Z,
-			     -NX_CON_IMU_MAX_ACCEL_MAG,
-			     NX_CON_IMU_MAX_ACCEL_MAG,
-			     NX_CON_IMU_ACCEL_FUZZ,
-			     NX_CON_IMU_ACCEL_FLAT);
-	input_abs_set_res(con->imu_input, ABS_X, NX_CON_IMU_ACCEL_RES_PER_G);
-	input_abs_set_res(con->imu_input, ABS_Y, NX_CON_IMU_ACCEL_RES_PER_G);
-	input_abs_set_res(con->imu_input, ABS_Z, NX_CON_IMU_ACCEL_RES_PER_G);
+		/* configure imu axes */
+		input_set_abs_params(con->imu_input,
+				     ABS_X,
+				     -NX_CON_IMU_MAX_ACCEL_MAG,
+				     NX_CON_IMU_MAX_ACCEL_MAG,
+				     NX_CON_IMU_ACCEL_FUZZ,
+				     NX_CON_IMU_ACCEL_FLAT);
+		input_set_abs_params(con->imu_input,
+				     ABS_Y,
+				     -NX_CON_IMU_MAX_ACCEL_MAG,
+				     NX_CON_IMU_MAX_ACCEL_MAG,
+				     NX_CON_IMU_ACCEL_FUZZ,
+				     NX_CON_IMU_ACCEL_FLAT);
+		input_set_abs_params(con->imu_input,
+				     ABS_Z,
+				     -NX_CON_IMU_MAX_ACCEL_MAG,
+				     NX_CON_IMU_MAX_ACCEL_MAG,
+				     NX_CON_IMU_ACCEL_FUZZ,
+				     NX_CON_IMU_ACCEL_FLAT);
+		input_abs_set_res(con->imu_input, ABS_X, NX_CON_IMU_ACCEL_RES_PER_G);
+		input_abs_set_res(con->imu_input, ABS_Y, NX_CON_IMU_ACCEL_RES_PER_G);
+		input_abs_set_res(con->imu_input, ABS_Z, NX_CON_IMU_ACCEL_RES_PER_G);
 
-	input_set_abs_params(con->imu_input,
-			     ABS_RX,
-			     -NX_CON_IMU_MAX_GYRO_MAG,
-			     NX_CON_IMU_MAX_GYRO_MAG,
-			     NX_CON_IMU_GYRO_FUZZ,
-			     NX_CON_IMU_GYRO_FLAT);
-	input_set_abs_params(con->imu_input,
-			     ABS_RY,
-			     -NX_CON_IMU_MAX_GYRO_MAG,
-			     NX_CON_IMU_MAX_GYRO_MAG,
-			     NX_CON_IMU_GYRO_FUZZ,
-			     NX_CON_IMU_GYRO_FLAT);
-	input_set_abs_params(con->imu_input,
-			     ABS_RZ,
-			     -NX_CON_IMU_MAX_GYRO_MAG,
-			     NX_CON_IMU_MAX_GYRO_MAG,
-			     NX_CON_IMU_GYRO_FUZZ,
-			     NX_CON_IMU_GYRO_FLAT);
+		input_set_abs_params(con->imu_input,
+				     ABS_RX,
+				     -NX_CON_IMU_MAX_GYRO_MAG,
+				     NX_CON_IMU_MAX_GYRO_MAG,
+				     NX_CON_IMU_GYRO_FUZZ,
+				     NX_CON_IMU_GYRO_FLAT);
+		input_set_abs_params(con->imu_input,
+				     ABS_RY,
+				     -NX_CON_IMU_MAX_GYRO_MAG,
+				     NX_CON_IMU_MAX_GYRO_MAG,
+				     NX_CON_IMU_GYRO_FUZZ,
+				     NX_CON_IMU_GYRO_FLAT);
+		input_set_abs_params(con->imu_input,
+				     ABS_RZ,
+				     -NX_CON_IMU_MAX_GYRO_MAG,
+				     NX_CON_IMU_MAX_GYRO_MAG,
+				     NX_CON_IMU_GYRO_FUZZ,
+				     NX_CON_IMU_GYRO_FLAT);
 
-	input_abs_set_res(con->imu_input, ABS_RX, NX_CON_IMU_GYRO_RES_PER_DPS);
-	input_abs_set_res(con->imu_input, ABS_RY, NX_CON_IMU_GYRO_RES_PER_DPS);
-	input_abs_set_res(con->imu_input, ABS_RZ, NX_CON_IMU_GYRO_RES_PER_DPS);
+		input_abs_set_res(con->imu_input, ABS_RX, NX_CON_IMU_GYRO_RES_PER_DPS);
+		input_abs_set_res(con->imu_input, ABS_RY, NX_CON_IMU_GYRO_RES_PER_DPS);
+		input_abs_set_res(con->imu_input, ABS_RZ, NX_CON_IMU_GYRO_RES_PER_DPS);
 
-	__set_bit(EV_MSC, con->imu_input->evbit);
-	__set_bit(MSC_TIMESTAMP, con->imu_input->mscbit);
-	__set_bit(INPUT_PROP_ACCELEROMETER, con->imu_input->propbit);
+		__set_bit(EV_MSC, con->imu_input->evbit);
+		__set_bit(MSC_TIMESTAMP, con->imu_input->mscbit);
+		__set_bit(INPUT_PROP_ACCELEROMETER, con->imu_input->propbit);
 
-	if ((ret = input_register_device(con->imu_input)))
-		return ret;
+		if ((ret = input_register_device(con->imu_input)))
+			return ret;
+	}
 
 	return 0;
 }
