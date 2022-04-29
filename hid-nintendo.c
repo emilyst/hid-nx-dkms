@@ -1635,11 +1635,6 @@ static void nx_con_parse_report(struct nx_con *con, struct nx_con_input_report *
 		nx_con_report_buttons(con, rep, right_joycon_button_mappings);
 		if (!nx_con_device_is_chrggrip(con))
 			nx_con_report_buttons(con, rep, right_joycon_s_button_mappings);
-	} else if (nx_con_device_is_chrggrip(con)) {
-		nx_con_report_left_stick(con, rep);
-		nx_con_report_right_stick(con, rep);
-		nx_con_report_buttons(con, rep, left_joycon_button_mappings);
-		nx_con_report_buttons(con, rep, right_joycon_button_mappings);
 	} else if (nx_con_type_is_procon(con)) {
 		nx_con_report_left_stick(con, rep);
 		nx_con_report_right_stick(con, rep);
