@@ -2,7 +2,7 @@
 
 _pkgbase=hid-nintendo-dkms
 pkgname=hid-nintendo-dkms
-pkgver=v1.8
+pkgver=v1.9
 pkgrel=1
 pkgdesc='Nintendo Switch HID driver with NSO controller support'
 url=https://github.com/emilyst/hid-nintendo
@@ -20,7 +20,7 @@ source=(
 b2sums=('e638a74c624cb218a21509e8194f02c34254ec2fcd9a740574f2a2f28fe3ef14691e654514cb05b52f94e49aedcdb0583ee1525bb896650f514fb85aafbb34e1'
         '72d5608d21d261552ecb853176961b3ea3e01bb21612bb225d5664790bcbf3ed34cf63a60c3168dff890eff477d38bfdf07df8bfdbef6ee1ce92d8b008dfc633'
         'df8038f5fc1de957dd41163d964b5a8b57d98c37bf1263f5397e452f270a43a4bd66f345a312c3cf73ca48db982248126db7d147ef755b5acae33005c1f548c2'
-        'e1023e18072c420134fe34bf85dd25e5c78643841dc8becbe419f487fef0fd72c6111a31febd70b09b5625a97e57f7db40080f60a1085ccfa3ec0de977c83553')
+        '0aaddee5523d16b6371a15cf0b26c37eb29f7d6b4c183cbbf72550a02dd02c7352ffc225da945abd4256550ecf329da0ac33a1c47d5d97ceb31b62ef4fe96b22')
 
 pkgver() {
   git describe --long --tags | sed 's/\([^-]*-g\)/r\1/;s/-/./g'

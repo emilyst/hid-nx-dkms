@@ -63,8 +63,8 @@ Next, clone the source code.
 Then run the following commands as root or using `sudo`.
 
     dkms add .
-    dkms build hid-nintendo -v 1.8
-    dkms install hid-nintendo -v 1.8
+    dkms build hid-nintendo -v 1.9
+    dkms install hid-nintendo -v 1.9
 
 Once installed, this driver replaces the native `hid-nintendo` driver. No other configuration should be necessary.
 
@@ -79,8 +79,8 @@ Uninstallation
 To remove fully, run the following commands as root or using `sudo`.
 
     modprobe -r hid_nintendo
-    dkms uninstall -m hid-nintendo -v 1.8
-    dkms remove -m hid-nintendo -v 1.8
+    dkms uninstall -m hid-nintendo -v 1.9
+    dkms remove -m hid-nintendo -v 1.9
     rm -rf /usr/src/hid-nintendo-*
 
 
