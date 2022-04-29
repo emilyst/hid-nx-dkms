@@ -355,21 +355,16 @@ static const u32 NX_CON_BTN_L		= BIT(22);
 static const u32 NX_CON_BTN_ZL		= BIT(23);
 
 struct nx_con_button_mapping {
-	u32 event_code;
-	u32 button_bit;
+	u32 code;
+	u32 bit;
 };
 
 /*
- * The unused *right*-side triggers become the SL/SR triggers for the *left*
- * Joy-Con.
- *
  * D-pad is configured as buttons for the left Joy-Con only!
  */
 static const struct nx_con_button_mapping left_joycon_button_mappings[] = {
 	{ BTN_TL,		NX_CON_BTN_L,		},
-	{ BTN_TR,		NX_CON_BTN_SL_L,	},
 	{ BTN_TL2,		NX_CON_BTN_ZL,		},
-	{ BTN_TR2,		NX_CON_BTN_SR_L,	},
 	{ BTN_SELECT,		NX_CON_BTN_MINUS,	},
 	{ BTN_THUMBL,		NX_CON_BTN_LSTICK,	},
 	{ BTN_DPAD_UP,		NX_CON_BTN_UP,		},
@@ -377,26 +372,40 @@ static const struct nx_con_button_mapping left_joycon_button_mappings[] = {
 	{ BTN_DPAD_LEFT,	NX_CON_BTN_LEFT,	},
 	{ BTN_DPAD_RIGHT,	NX_CON_BTN_RIGHT,	},
 	{ BTN_1,		NX_CON_BTN_CAP,		},
-	{ },
+	{ /* sentinel */ },
 };
 
 /*
- * The unused *left*-side triggers become the SL/SR triggers for the *right*
- * Joy-Con.
+ * The unused *right*-side triggers become the SL/SR triggers for the *left*
+ * Joy-Con, if and only if we're not using a charging grip.
  */
+static const struct nx_con_button_mapping left_joycon_s_button_mappings[] = {
+	{ BTN_TR,	NX_CON_BTN_SL_L,	},
+	{ BTN_TR2,	NX_CON_BTN_SR_L,	},
+	{ /* sentinel */ },
+};
+
 static const struct nx_con_button_mapping right_joycon_button_mappings[] = {
 	{ BTN_EAST,	NX_CON_BTN_A,		},
 	{ BTN_SOUTH,	NX_CON_BTN_B,		},
 	{ BTN_NORTH,	NX_CON_BTN_X,		},
 	{ BTN_WEST,	NX_CON_BTN_Y,		},
-	{ BTN_TL,	NX_CON_BTN_SL_R,	},
 	{ BTN_TR,	NX_CON_BTN_R,		},
-	{ BTN_TL2,	NX_CON_BTN_SR_R,	},
 	{ BTN_TR2,	NX_CON_BTN_ZR,		},
 	{ BTN_START,	NX_CON_BTN_PLUS,	},
 	{ BTN_THUMBR,	NX_CON_BTN_RSTICK,	},
 	{ BTN_0,	NX_CON_BTN_HOME,	},
-	{ },
+	{ /* sentinel */ },
+};
+
+/*
+ * The unused *left*-side triggers become the SL/SR triggers for the *right*
+ * Joy-Con, if and only if we're not using a charging grip.
+ */
+static const struct nx_con_button_mapping right_joycon_s_button_mappings[] = {
+	{ BTN_TL,	NX_CON_BTN_SL_R,	},
+	{ BTN_TL2,	NX_CON_BTN_SR_R,	},
+	{ /* sentinel */ },
 };
 
 static const struct nx_con_button_mapping procon_button_mappings[] = {
@@ -414,7 +423,7 @@ static const struct nx_con_button_mapping procon_button_mappings[] = {
 	{ BTN_THUMBR,	NX_CON_BTN_RSTICK,	},
 	{ BTN_0,	NX_CON_BTN_HOME,	},
 	{ BTN_1,	NX_CON_BTN_CAP,		},
-	{ },
+	{ /* sentinel */ },
 };
 
 static const struct nx_con_button_mapping nescon_button_mappings[] = {
@@ -424,7 +433,7 @@ static const struct nx_con_button_mapping nescon_button_mappings[] = {
 	{ BTN_TR,	NX_CON_BTN_R,		},
 	{ BTN_SELECT,	NX_CON_BTN_MINUS,	},
 	{ BTN_START,	NX_CON_BTN_PLUS,	},
-	{ },
+	{ /* sentinel */ },
 };
 
 static const struct nx_con_button_mapping snescon_button_mappings[] = {
@@ -438,7 +447,7 @@ static const struct nx_con_button_mapping snescon_button_mappings[] = {
 	{ BTN_TR2,	NX_CON_BTN_ZR,		},
 	{ BTN_SELECT,	NX_CON_BTN_MINUS,	},
 	{ BTN_START,	NX_CON_BTN_PLUS,	},
-	{ },
+	{ /* sentinel */ },
 };
 
 /*
@@ -453,7 +462,7 @@ static const struct nx_con_button_mapping gencon_button_mappings[] = {
 	{ BTN_START,	NX_CON_BTN_PLUS,	},
 	{ BTN_0,	NX_CON_BTN_HOME,	},
 	{ BTN_1,	NX_CON_BTN_CAP,		},
-	{ },
+	{ /* sentinel */ },
 };
 
 /*
@@ -473,7 +482,7 @@ static const struct nx_con_button_mapping n64con_button_mappings[] = {
 	{ BTN_DPAD_RIGHT,	NX_CON_BTN_MINUS,	},
 	{ BTN_0,		NX_CON_BTN_HOME,	},
 	{ BTN_1,		NX_CON_BTN_CAP,		},
-	{ },
+	{ /* sentinel */ },
 };
 
 enum nx_con_msg_type {
@@ -533,7 +542,7 @@ struct nx_con_input_report {
 
 static const unsigned short NX_CON_RUMBLE_ZERO_AMP_PKT_CNT = 5;
 
-static const char * const nx_con_player_led_names[] = {
+static const char * nx_con_player_led_names[] = {
 	LED_FUNCTION_PLAYER1,
 	LED_FUNCTION_PLAYER2,
 	LED_FUNCTION_PLAYER3,
@@ -772,6 +781,11 @@ static inline bool nx_con_has_rumble(struct nx_con *con)
 	       nx_con_type_is_n64con(con);
 }
 
+static inline bool nx_con_connected_via_usb(struct nx_con *con)
+{
+	return con->hdev->bus == BUS_USB;
+}
+
 static int __nx_con_hid_send(struct hid_device *hdev, u8 *data, size_t len)
 {
 	u8 *buf;
@@ -874,8 +888,9 @@ static int nx_con_send_usb(struct nx_con *con, u8 cmd, u32 timeout)
 }
 
 static int nx_con_send_subcmd(struct nx_con *con,
-			       struct nx_con_subcmd_request *subcmd,
-			       size_t data_len, u32 timeout)
+			      struct nx_con_subcmd_request *subcmd,
+			      size_t data_len,
+			      u32 timeout)
 {
 	int ret;
 	unsigned long flags;
@@ -900,9 +915,10 @@ static int nx_con_send_subcmd(struct nx_con *con,
 	con->subcmd_ack_match = subcmd->subcmd_id;
 	con->msg_type = NX_CON_MSG_TYPE_SUBCMD;
 
-	if ((ret = nx_con_hid_send_sync(con, (u8 *)subcmd,
-					 sizeof(*subcmd) + data_len,
-					 timeout)) < 0)
+	if ((ret = nx_con_hid_send_sync(con,
+					(u8 *)subcmd,
+					sizeof(*subcmd) + data_len,
+					timeout)) < 0)
 		hid_dbg(con->hdev, "send subcommand failed; ret=%d\n", ret);
 	else
 		ret = 0;
@@ -1043,7 +1059,8 @@ static int nx_con_request_calibration(struct nx_con *con)
 		hid_info(con->hdev, "using factory cal for right stick\n");
 	}
 
-	if ((ret = nx_con_read_stick_calibration(con, left_stick_addr,
+	if ((ret = nx_con_read_stick_calibration(con,
+						 left_stick_addr,
 					     	 &con->left_stick_cal_x,
 					     	 &con->left_stick_cal_y,
 					     	 true))) {
@@ -1060,13 +1077,12 @@ static int nx_con_request_calibration(struct nx_con *con)
 		con->left_stick_cal_y.min = DFLT_STICK_CAL_MIN;
 	}
 
-	if ((ret = nx_con_read_stick_calibration(con, right_stick_addr,
+	if ((ret = nx_con_read_stick_calibration(con,
+						 right_stick_addr,
 						 &con->right_stick_cal_x,
 					         &con->right_stick_cal_y,
 					         false))) {
-		hid_warn(con->hdev,
-			 "Failed to read right stick cal, using dflts; e=%d\n",
-			 ret);
+		hid_warn(con->hdev, "Failed to read right stick cal, using dflts; e=%d\n", ret);
 
 		con->right_stick_cal_x.center = DFLT_STICK_CAL_CEN;
 		con->right_stick_cal_x.max = DFLT_STICK_CAL_MAX;
@@ -1078,22 +1094,22 @@ static int nx_con_request_calibration(struct nx_con *con)
 	}
 
 	hid_dbg(con->hdev, "calibration:\n"
-			    "l_x_c=%d l_x_max=%d l_x_min=%d\n"
-			    "l_y_c=%d l_y_max=%d l_y_min=%d\n"
-			    "r_x_c=%d r_x_max=%d r_x_min=%d\n"
-			    "r_y_c=%d r_y_max=%d r_y_min=%d\n",
-			    con->left_stick_cal_x.center,
-			    con->left_stick_cal_x.max,
-			    con->left_stick_cal_x.min,
-			    con->left_stick_cal_y.center,
-			    con->left_stick_cal_y.max,
-			    con->left_stick_cal_y.min,
-			    con->right_stick_cal_x.center,
-			    con->right_stick_cal_x.max,
-			    con->right_stick_cal_x.min,
-			    con->right_stick_cal_y.center,
-			    con->right_stick_cal_y.max,
-			    con->right_stick_cal_y.min);
+			   "l_x_c=%d l_x_max=%d l_x_min=%d\n"
+			   "l_y_c=%d l_y_max=%d l_y_min=%d\n"
+			   "r_x_c=%d r_x_max=%d r_x_min=%d\n"
+			   "r_y_c=%d r_y_max=%d r_y_min=%d\n",
+			   con->left_stick_cal_x.center,
+			   con->left_stick_cal_x.max,
+			   con->left_stick_cal_x.min,
+			   con->left_stick_cal_y.center,
+			   con->left_stick_cal_y.max,
+			   con->left_stick_cal_y.min,
+			   con->right_stick_cal_x.center,
+			   con->right_stick_cal_x.max,
+			   con->right_stick_cal_x.min,
+			   con->right_stick_cal_y.center,
+			   con->right_stick_cal_y.max,
+			   con->right_stick_cal_y.min);
 
 	return 0;
 }
@@ -1164,22 +1180,22 @@ static int nx_con_request_imu_calibration(struct nx_con *con)
 	nx_con_calc_imu_cal_divisors(con);
 
 	hid_dbg(con->hdev, "IMU calibration:\n"
-			    "a_o[0]=%d a_o[1]=%d a_o[2]=%d\n"
-			    "a_s[0]=%d a_s[1]=%d a_s[2]=%d\n"
-			    "g_o[0]=%d g_o[1]=%d g_o[2]=%d\n"
-			    "g_s[0]=%d g_s[1]=%d g_s[2]=%d\n",
-			    con->accel_cal.offset[0],
-			    con->accel_cal.offset[1],
-			    con->accel_cal.offset[2],
-			    con->accel_cal.scale[0],
-			    con->accel_cal.scale[1],
-			    con->accel_cal.scale[2],
-			    con->gyro_cal.offset[0],
-			    con->gyro_cal.offset[1],
-			    con->gyro_cal.offset[2],
-			    con->gyro_cal.scale[0],
-			    con->gyro_cal.scale[1],
-			    con->gyro_cal.scale[2]);
+			   "a_o[0]=%d a_o[1]=%d a_o[2]=%d\n"
+			   "a_s[0]=%d a_s[1]=%d a_s[2]=%d\n"
+			   "g_o[0]=%d g_o[1]=%d g_o[2]=%d\n"
+			   "g_s[0]=%d g_s[1]=%d g_s[2]=%d\n",
+			   con->accel_cal.offset[0],
+			   con->accel_cal.offset[1],
+			   con->accel_cal.offset[2],
+			   con->accel_cal.scale[0],
+			   con->accel_cal.scale[1],
+			   con->accel_cal.scale[2],
+			   con->gyro_cal.offset[0],
+			   con->gyro_cal.offset[1],
+			   con->gyro_cal.offset[2],
+			   con->gyro_cal.scale[0],
+			   con->gyro_cal.scale[1],
+			   con->gyro_cal.scale[2]);
 
 	return 0;
 }
@@ -1529,8 +1545,8 @@ static void nx_con_parse_battery_status(struct nx_con *con, struct nx_con_input_
 	spin_unlock_irqrestore(&con->lock, flags);
 }
 
-static void nx_con_report_left_stick_inputs(struct nx_con *con,
-					    struct nx_con_input_report *rep)
+static void nx_con_report_left_stick(struct nx_con *con,
+				     struct nx_con_input_report *rep)
 {
 	u16 raw_x;
 	u16 raw_y;
@@ -1547,8 +1563,8 @@ static void nx_con_report_left_stick_inputs(struct nx_con *con,
 	input_report_abs(con->idev, ABS_Y, y);
 }
 
-static void nx_con_report_right_stick_inputs(struct nx_con *con,
-					     struct nx_con_input_report *rep)
+static void nx_con_report_right_stick(struct nx_con *con,
+				      struct nx_con_input_report *rep)
 {
 	u16 raw_x;
 	u16 raw_y;
@@ -1565,8 +1581,8 @@ static void nx_con_report_right_stick_inputs(struct nx_con *con,
 	input_report_abs(con->idev, ABS_RY, y);
 }
 
-static void nx_con_report_dpad_inputs(struct nx_con *con,
-				      struct nx_con_input_report *rep)
+static void nx_con_report_dpad(struct nx_con *con,
+			       struct nx_con_input_report *rep)
 {
 	int hatx = 0;
 	int haty = 0;
@@ -1586,15 +1602,15 @@ static void nx_con_report_dpad_inputs(struct nx_con *con,
 	input_report_abs(con->idev, ABS_HAT0Y, haty);
 }
 
-static void nx_con_report_button_inputs(struct nx_con *con,
-					struct nx_con_input_report *rep,
-					const struct nx_con_button_mapping button_mappings[])
+static void nx_con_report_buttons(struct nx_con *con,
+				  struct nx_con_input_report *rep,
+				  const struct nx_con_button_mapping button_mappings[])
 {
 	const struct nx_con_button_mapping *button;
 	u32 status = hid_field_extract(con->hdev, rep->button_status, 0, 24);
 
-	for (button = button_mappings; button->event_code; button++)
-		input_report_key(con->idev, button->event_code, status & button->button_bit);
+	for (button = button_mappings; button->code; button++)
+		input_report_key(con->idev, button->code, status & button->bit);
 }
 
 static void nx_con_parse_report(struct nx_con *con, struct nx_con_input_report *rep)
@@ -1610,34 +1626,34 @@ static void nx_con_parse_report(struct nx_con *con, struct nx_con_input_report *
 		nx_con_report_imu(con, rep);
 
 	if (nx_con_type_is_left_joycon(con)) {
-		nx_con_report_left_stick_inputs(con, rep);
-		nx_con_report_button_inputs(con, rep, left_joycon_button_mappings);
+		nx_con_report_left_stick(con, rep);
+		nx_con_report_buttons(con, rep, left_joycon_button_mappings);
 	} else if (nx_con_type_is_right_joycon(con)) {
-		nx_con_report_right_stick_inputs(con, rep);
-		nx_con_report_button_inputs(con, rep, right_joycon_button_mappings);
+		nx_con_report_right_stick(con, rep);
+		nx_con_report_buttons(con, rep, right_joycon_button_mappings);
 	} else if (nx_con_device_is_chrggrip(con)) {
-		nx_con_report_left_stick_inputs(con, rep);
-		nx_con_report_right_stick_inputs(con, rep);
-		nx_con_report_button_inputs(con, rep, left_joycon_button_mappings);
-		nx_con_report_button_inputs(con, rep, right_joycon_button_mappings);
+		nx_con_report_left_stick(con, rep);
+		nx_con_report_right_stick(con, rep);
+		nx_con_report_buttons(con, rep, left_joycon_button_mappings);
+		nx_con_report_buttons(con, rep, right_joycon_button_mappings);
 	} else if (nx_con_type_is_procon(con)) {
-		nx_con_report_left_stick_inputs(con, rep);
-		nx_con_report_right_stick_inputs(con, rep);
-		nx_con_report_dpad_inputs(con, rep);
-		nx_con_report_button_inputs(con, rep, procon_button_mappings);
+		nx_con_report_left_stick(con, rep);
+		nx_con_report_right_stick(con, rep);
+		nx_con_report_dpad(con, rep);
+		nx_con_report_buttons(con, rep, procon_button_mappings);
 	} else if (nx_con_type_is_any_nescon(con)) {
-		nx_con_report_dpad_inputs(con, rep);
-		nx_con_report_button_inputs(con, rep, nescon_button_mappings);
+		nx_con_report_dpad(con, rep);
+		nx_con_report_buttons(con, rep, nescon_button_mappings);
 	} else if (nx_con_type_is_snescon(con)) {
-		nx_con_report_dpad_inputs(con, rep);
-		nx_con_report_button_inputs(con, rep, snescon_button_mappings);
+		nx_con_report_dpad(con, rep);
+		nx_con_report_buttons(con, rep, snescon_button_mappings);
 	} else if (nx_con_type_is_gencon(con)) {
-		nx_con_report_dpad_inputs(con, rep);
-		nx_con_report_button_inputs(con, rep, gencon_button_mappings);
+		nx_con_report_dpad(con, rep);
+		nx_con_report_buttons(con, rep, gencon_button_mappings);
 	} else if (nx_con_type_is_n64con(con)) {
-		nx_con_report_left_stick_inputs(con, rep);
-		nx_con_report_dpad_inputs(con, rep);
-		nx_con_report_button_inputs(con, rep, n64con_button_mappings);
+		nx_con_report_left_stick(con, rep);
+		nx_con_report_dpad(con, rep);
+		nx_con_report_buttons(con, rep, n64con_button_mappings);
 	}
 
 	input_sync(con->idev);
@@ -1822,8 +1838,7 @@ static int nx_con_set_rumble(struct nx_con *con,
 	spin_lock_irqsave(&con->lock, flags);
 	if (++con->rumble_queue_head >= NX_CON_RUMBLE_QUEUE_SIZE)
 		con->rumble_queue_head = 0;
-	memcpy(con->rumble_data[con->rumble_queue_head], data,
-	       NX_CON_RUMBLE_DATA_SIZE);
+	memcpy(con->rumble_data[con->rumble_queue_head], data, NX_CON_RUMBLE_DATA_SIZE);
 	spin_unlock_irqrestore(&con->lock, flags);
 
 	/* don't wait for the periodic send (reduces latency) */
@@ -1849,7 +1864,7 @@ static int nx_con_play_effect(struct input_dev *idev,
 }
 #endif /* IS_ENABLED(CONFIG_NINTENDO_FF) */
 
-static void nx_con_configure_left_stick_inputs(struct input_dev *idev)
+static void nx_con_config_left_stick(struct input_dev *idev)
 {
 	input_set_abs_params(idev,
 			     ABS_X,
@@ -1865,7 +1880,7 @@ static void nx_con_configure_left_stick_inputs(struct input_dev *idev)
 			     NX_CON_STICK_FLAT);
 }
 
-static void nx_con_configure_right_stick_inputs(struct input_dev *idev)
+static void nx_con_config_right_stick(struct input_dev *idev)
 {
 	input_set_abs_params(idev,
 			     ABS_RX,
@@ -1881,7 +1896,7 @@ static void nx_con_configure_right_stick_inputs(struct input_dev *idev)
 			     NX_CON_STICK_FLAT);
 }
 
-static void nx_con_configure_dpad_inputs(struct input_dev *idev)
+static void nx_con_config_dpad(struct input_dev *idev)
 {
 	input_set_abs_params(idev,
 			     ABS_HAT0X,
@@ -1897,16 +1912,16 @@ static void nx_con_configure_dpad_inputs(struct input_dev *idev)
 			     NX_CON_DPAD_FLAT);
 }
 
-static void nx_con_configure_button_inputs(struct input_dev *idev,
-                                           const struct nx_con_button_mapping button_mappings[])
+static void nx_con_config_buttons(struct input_dev *idev,
+                                  const struct nx_con_button_mapping button_mappings[])
 {
 	const struct nx_con_button_mapping *button;
 
-	for (button = button_mappings; button->event_code; button++)
-		input_set_capability(idev, EV_KEY, button->event_code);
+	for (button = button_mappings; button->code; button++)
+		input_set_capability(idev, EV_KEY, button->code);
 }
 
-static void nx_con_configure_rumble(struct nx_con *con)
+static void nx_con_config_rumble(struct nx_con *con)
 {
 #if IS_ENABLED(CONFIG_NINTENDO_FF)
 	input_set_capability(con->idev, EV_FF, FF_RUMBLE);
@@ -1924,7 +1939,7 @@ static void nx_con_configure_rumble(struct nx_con *con)
 #endif
 }
 
-static int nx_con_register_imu_input_device(struct nx_con *con)
+static int nx_con_imu_create(struct nx_con *con)
 {
 	struct hid_device *hdev;
 	const char *imu_name;
@@ -2024,42 +2039,41 @@ static int nx_con_input_create(struct nx_con *con)
 
 	input_set_drvdata(con->idev, con);
 
-	if (nx_con_type_is_left_joycon(con)) {
-		nx_con_configure_left_stick_inputs(con->idev);
-		nx_con_configure_button_inputs(con->idev, left_joycon_button_mappings);
-	} else if (nx_con_type_is_right_joycon(con)) {
-		nx_con_configure_right_stick_inputs(con->idev);
-		nx_con_configure_button_inputs(con->idev, right_joycon_button_mappings);
-	} else if (nx_con_device_is_chrggrip(con)) {
-		nx_con_configure_left_stick_inputs(con->idev);
-		nx_con_configure_right_stick_inputs(con->idev);
-		nx_con_configure_button_inputs(con->idev, left_joycon_button_mappings);
-		nx_con_configure_button_inputs(con->idev, right_joycon_button_mappings);
+	if (nx_con_type_is_right_joycon(con)) {
+		nx_con_config_right_stick(con->idev);
+		nx_con_config_buttons(con->idev, right_joycon_button_mappings);
+		if (!nx_con_device_is_chrggrip(con))
+			nx_con_config_buttons(con->idev, right_joycon_s_button_mappings);
+	} else if (nx_con_type_is_left_joycon(con)) {
+		nx_con_config_left_stick(con->idev);
+		nx_con_config_buttons(con->idev, left_joycon_button_mappings);
+		if (!nx_con_device_is_chrggrip(con))
+			nx_con_config_buttons(con->idev, left_joycon_s_button_mappings);
 	} else if (nx_con_type_is_procon(con)) {
-		nx_con_configure_left_stick_inputs(con->idev);
-		nx_con_configure_right_stick_inputs(con->idev);
-		nx_con_configure_dpad_inputs(con->idev);
-		nx_con_configure_button_inputs(con->idev, procon_button_mappings);
+		nx_con_config_left_stick(con->idev);
+		nx_con_config_right_stick(con->idev);
+		nx_con_config_dpad(con->idev);
+		nx_con_config_buttons(con->idev, procon_button_mappings);
 	} else if (nx_con_type_is_any_nescon(con)) {
-		nx_con_configure_dpad_inputs(con->idev);
-		nx_con_configure_button_inputs(con->idev, nescon_button_mappings);
+		nx_con_config_dpad(con->idev);
+		nx_con_config_buttons(con->idev, nescon_button_mappings);
 	} else if (nx_con_type_is_snescon(con)) {
-		nx_con_configure_dpad_inputs(con->idev);
-		nx_con_configure_button_inputs(con->idev, snescon_button_mappings);
+		nx_con_config_dpad(con->idev);
+		nx_con_config_buttons(con->idev, snescon_button_mappings);
 	} else if (nx_con_type_is_gencon(con)) {
-		nx_con_configure_dpad_inputs(con->idev);
-		nx_con_configure_button_inputs(con->idev, gencon_button_mappings);
+		nx_con_config_dpad(con->idev);
+		nx_con_config_buttons(con->idev, gencon_button_mappings);
 	} else if (nx_con_type_is_n64con(con)) {
-		nx_con_configure_dpad_inputs(con->idev);
-		nx_con_configure_left_stick_inputs(con->idev);
-		nx_con_configure_button_inputs(con->idev, n64con_button_mappings);
+		nx_con_config_dpad(con->idev);
+		nx_con_config_left_stick(con->idev);
+		nx_con_config_buttons(con->idev, n64con_button_mappings);
 	}
 
-	if (nx_con_has_imu(con) && (ret = nx_con_register_imu_input_device(con)))
+	if (nx_con_has_imu(con) && (ret = nx_con_imu_create(con)))
 		return ret;
 
 	if (nx_con_has_rumble(con))
-		nx_con_configure_rumble(con);
+		nx_con_config_rumble(con);
 
 	if ((ret = input_register_device(con->idev)))
 		return ret;
@@ -2474,8 +2488,7 @@ static int nintendo_hid_probe(struct hid_device *hdev,
 	/* Initialize the controller */
 	mutex_lock(&con->output_mutex);
 
-	/* if handshake command fails, assume ble pro controller */
-	if (nx_con_device_has_usb(con) && !nx_con_send_usb(con, NX_CON_USB_CMD_HANDSHAKE, HZ)) {
+	if (nx_con_connected_via_usb(con)) {
 		hid_dbg(hdev, "detected USB controller\n");
 
 		hid_dbg(hdev, "setting USB baud rate\n");
@@ -2566,6 +2579,31 @@ static int nintendo_hid_probe(struct hid_device *hdev,
 	con->state = NX_CON_STATE_READ;
 
 	hid_dbg(hdev, "probe - success\n");
+
+	hid_dbg(hdev, "device_is_left_joycon    = %d\n", nx_con_device_is_left_joycon(con));
+ 	hid_dbg(hdev, "device_is_right_joycon   = %d\n", nx_con_device_is_right_joycon(con));
+ 	hid_dbg(hdev, "device_is_procon         = %d\n", nx_con_device_is_procon(con));
+ 	hid_dbg(hdev, "device_is_chrggrip       = %d\n", nx_con_device_is_chrggrip(con));
+ 	hid_dbg(hdev, "device_is_snescon        = %d\n", nx_con_device_is_snescon(con));
+ 	hid_dbg(hdev, "device_is_gencon         = %d\n", nx_con_device_is_gencon(con));
+ 	hid_dbg(hdev, "device_is_n64con         = %d\n", nx_con_device_is_n64con(con));
+ 	hid_dbg(hdev, "device_has_usb           = %d\n", nx_con_device_has_usb(con));
+ 	hid_dbg(hdev, "type_is_left_joycon      = %d\n", nx_con_type_is_left_joycon(con));
+ 	hid_dbg(hdev, "type_is_right_joycon     = %d\n", nx_con_type_is_right_joycon(con));
+ 	hid_dbg(hdev, "type_is_procon           = %d\n", nx_con_type_is_procon(con));
+ 	hid_dbg(hdev, "type_is_snescon          = %d\n", nx_con_type_is_snescon(con));
+ 	hid_dbg(hdev, "type_is_gencon           = %d\n", nx_con_type_is_gencon(con));
+ 	hid_dbg(hdev, "type_is_n64con           = %d\n", nx_con_type_is_n64con(con));
+ 	hid_dbg(hdev, "type_is_left_nescon      = %d\n", nx_con_type_is_left_nescon(con));
+ 	hid_dbg(hdev, "type_is_right_nescon     = %d\n", nx_con_type_is_right_nescon(con));
+ 	hid_dbg(hdev, "type_has_left_controls   = %d\n", nx_con_type_has_left_controls(con));
+ 	hid_dbg(hdev, "type_has_right_controls  = %d\n", nx_con_type_has_right_controls(con));
+ 	hid_dbg(hdev, "type_is_any_joycon       = %d\n", nx_con_type_is_any_joycon(con));
+ 	hid_dbg(hdev, "type_is_any_nescon       = %d\n", nx_con_type_is_any_nescon(con));
+ 	hid_dbg(hdev, "has_imu                  = %d\n", nx_con_has_imu(con));
+ 	hid_dbg(hdev, "has_joysticks            = %d\n", nx_con_has_joysticks(con));
+ 	hid_dbg(hdev, "has_rumble               = %d\n", nx_con_has_rumble(con));
+	hid_dbg(hdev, "nx_con_connected_via_usb = %d\n", nx_con_connected_via_usb(con));
 
 	return 0;
 
