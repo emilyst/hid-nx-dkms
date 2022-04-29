@@ -359,7 +359,6 @@ struct nx_con_button_mapping {
 	u32 button_bit;
 };
 
-
 /*
  * The unused *right*-side triggers become the SL/SR triggers for the *left*
  * Joy-Con.
@@ -367,19 +366,17 @@ struct nx_con_button_mapping {
  * D-pad is configured as buttons for the left Joy-Con only!
  */
 static const struct nx_con_button_mapping left_joycon_button_mappings[] = {
+	{ BTN_TL,		NX_CON_BTN_L,		},
+	{ BTN_TR,		NX_CON_BTN_SL_L,	},
+	{ BTN_TL2,		NX_CON_BTN_ZL,		},
+	{ BTN_TR2,		NX_CON_BTN_SR_L,	},
+	{ BTN_SELECT,		NX_CON_BTN_MINUS,	},
+	{ BTN_THUMBL,		NX_CON_BTN_LSTICK,	},
 	{ BTN_DPAD_UP,		NX_CON_BTN_UP,		},
 	{ BTN_DPAD_DOWN,	NX_CON_BTN_DOWN,	},
 	{ BTN_DPAD_LEFT,	NX_CON_BTN_LEFT,	},
 	{ BTN_DPAD_RIGHT,	NX_CON_BTN_RIGHT,	},
-	{ BTN_SELECT,		NX_CON_BTN_MINUS,	},
 	{ BTN_1,		NX_CON_BTN_CAP,		},
-	{ BTN_THUMBL,		NX_CON_BTN_LSTICK,	},
-	{ BTN_TL,		NX_CON_BTN_L,		},
-	{ BTN_TL2,		NX_CON_BTN_ZL,		},
-
-	/* Report the non-existent *right* triggers as *left* S buttons */
-	{ BTN_TR,		NX_CON_BTN_SL_L,	},
-	{ BTN_TR2,		NX_CON_BTN_SR_L,	},
 	{ },
 };
 
@@ -388,61 +385,59 @@ static const struct nx_con_button_mapping left_joycon_button_mappings[] = {
  * Joy-Con.
  */
 static const struct nx_con_button_mapping right_joycon_button_mappings[] = {
-	{ BTN_START,	NX_CON_BTN_PLUS,	},
-	{ BTN_0,	NX_CON_BTN_HOME,	},
-	{ BTN_THUMBR,	NX_CON_BTN_RSTICK,	},
-	{ BTN_SOUTH,	NX_CON_BTN_B,		},
 	{ BTN_EAST,	NX_CON_BTN_A,		},
+	{ BTN_SOUTH,	NX_CON_BTN_B,		},
 	{ BTN_NORTH,	NX_CON_BTN_X,		},
 	{ BTN_WEST,	NX_CON_BTN_Y,		},
-	{ BTN_TR,	NX_CON_BTN_R,		},
-	{ BTN_TR2,	NX_CON_BTN_ZR,		},
-
-	/* Report the non-existent *left* triggers as *right* S buttons */
 	{ BTN_TL,	NX_CON_BTN_SL_R,	},
+	{ BTN_TR,	NX_CON_BTN_R,		},
 	{ BTN_TL2,	NX_CON_BTN_SR_R,	},
+	{ BTN_TR2,	NX_CON_BTN_ZR,		},
+	{ BTN_START,	NX_CON_BTN_PLUS,	},
+	{ BTN_THUMBR,	NX_CON_BTN_RSTICK,	},
+	{ BTN_0,	NX_CON_BTN_HOME,	},
 	{ },
 };
 
 static const struct nx_con_button_mapping procon_button_mappings[] = {
-	{ BTN_SELECT,	NX_CON_BTN_MINUS,	},
-	{ BTN_START,	NX_CON_BTN_PLUS,	},
-	{ BTN_0,	NX_CON_BTN_HOME,	},
-	{ BTN_1,	NX_CON_BTN_CAP,		},
-	{ BTN_THUMBL,	NX_CON_BTN_LSTICK,	},
-	{ BTN_THUMBR,	NX_CON_BTN_RSTICK,	},
-	{ BTN_SOUTH,	NX_CON_BTN_B,		},
 	{ BTN_EAST,	NX_CON_BTN_A,		},
+	{ BTN_SOUTH,	NX_CON_BTN_B,		},
 	{ BTN_NORTH,	NX_CON_BTN_X,		},
 	{ BTN_WEST,	NX_CON_BTN_Y,		},
 	{ BTN_TL,	NX_CON_BTN_L,		},
-	{ BTN_TL2,	NX_CON_BTN_ZL,		},
 	{ BTN_TR,	NX_CON_BTN_R,		},
+	{ BTN_TL2,	NX_CON_BTN_ZL,		},
 	{ BTN_TR2,	NX_CON_BTN_ZR,		},
+	{ BTN_SELECT,	NX_CON_BTN_MINUS,	},
+	{ BTN_START,	NX_CON_BTN_PLUS,	},
+	{ BTN_THUMBL,	NX_CON_BTN_LSTICK,	},
+	{ BTN_THUMBR,	NX_CON_BTN_RSTICK,	},
+	{ BTN_0,	NX_CON_BTN_HOME,	},
+	{ BTN_1,	NX_CON_BTN_CAP,		},
 	{ },
 };
 
 static const struct nx_con_button_mapping nescon_button_mappings[] = {
-	{ BTN_SELECT,	NX_CON_BTN_MINUS,	},
-	{ BTN_START,	NX_CON_BTN_PLUS,	},
 	{ BTN_SOUTH,	NX_CON_BTN_A,		},
 	{ BTN_EAST,	NX_CON_BTN_B,		},
 	{ BTN_TL,	NX_CON_BTN_L,		},
 	{ BTN_TR,	NX_CON_BTN_R,		},
+	{ BTN_SELECT,	NX_CON_BTN_MINUS,	},
+	{ BTN_START,	NX_CON_BTN_PLUS,	},
 	{ },
 };
 
 static const struct nx_con_button_mapping snescon_button_mappings[] = {
-	{ BTN_SELECT,	NX_CON_BTN_MINUS,	},
-	{ BTN_START,	NX_CON_BTN_PLUS,	},
 	{ BTN_SOUTH,	NX_CON_BTN_A,		},
 	{ BTN_EAST,	NX_CON_BTN_B,		},
 	{ BTN_NORTH,	NX_CON_BTN_X,		},
 	{ BTN_WEST,	NX_CON_BTN_Y,		},
 	{ BTN_TL,	NX_CON_BTN_L,		},
-	{ BTN_TL2,	NX_CON_BTN_ZL,		},
 	{ BTN_TR,	NX_CON_BTN_R,		},
+	{ BTN_TL2,	NX_CON_BTN_ZL,		},
 	{ BTN_TR2,	NX_CON_BTN_ZR,		},
+	{ BTN_SELECT,	NX_CON_BTN_MINUS,	},
+	{ BTN_START,	NX_CON_BTN_PLUS,	},
 	{ },
 };
 
@@ -451,13 +446,13 @@ static const struct nx_con_button_mapping snescon_button_mappings[] = {
  * gets assigned to BTN_EAST instead of BTN_A).
  */
 static const struct nx_con_button_mapping gencon_button_mappings[] = {
+	{ BTN_SOUTH,	NX_CON_BTN_A,		},
+	{ BTN_EAST,	NX_CON_BTN_B,		},
+	{ BTN_WEST,	NX_CON_BTN_R,		},
 	{ BTN_SELECT,	NX_CON_BTN_ZR,		},
 	{ BTN_START,	NX_CON_BTN_PLUS,	},
 	{ BTN_0,	NX_CON_BTN_HOME,	},
 	{ BTN_1,	NX_CON_BTN_CAP,		},
-	{ BTN_EAST,	NX_CON_BTN_B,		},
-	{ BTN_SOUTH,	NX_CON_BTN_A,		},
-	{ BTN_WEST,	NX_CON_BTN_R,		},
 	{ },
 };
 
@@ -465,19 +460,19 @@ static const struct nx_con_button_mapping gencon_button_mappings[] = {
  * N64's C buttons get assigned to d-pad directions and registered as buttons.
  */
 static const struct nx_con_button_mapping n64con_button_mappings[] = {
-	{ BTN_START,		NX_CON_BTN_PLUS,	},
-	{ BTN_0,		NX_CON_BTN_HOME,	},
-	{ BTN_1,		NX_CON_BTN_CAP,		},
-	{ BTN_B,		NX_CON_BTN_B,		},
 	{ BTN_A,		NX_CON_BTN_A,		},
-	{ BTN_DPAD_UP,		NX_CON_BTN_Y,		},
-	{ BTN_DPAD_DOWN,	NX_CON_BTN_ZR,		},
-	{ BTN_DPAD_LEFT,	NX_CON_BTN_X,		},
-	{ BTN_DPAD_RIGHT,	NX_CON_BTN_MINUS,	},
+	{ BTN_B,		NX_CON_BTN_B,		},
 	{ BTN_Z,		NX_CON_BTN_ZL,		},
 	{ BTN_TL,		NX_CON_BTN_L,		},
 	{ BTN_TR,		NX_CON_BTN_R,		},
 	{ BTN_TR2,		NX_CON_BTN_LSTICK,	},
+	{ BTN_START,		NX_CON_BTN_PLUS,	},
+	{ BTN_DPAD_UP,		NX_CON_BTN_Y,		},
+	{ BTN_DPAD_DOWN,	NX_CON_BTN_ZR,		},
+	{ BTN_DPAD_LEFT,	NX_CON_BTN_X,		},
+	{ BTN_DPAD_RIGHT,	NX_CON_BTN_MINUS,	},
+	{ BTN_0,		NX_CON_BTN_HOME,	},
+	{ BTN_1,		NX_CON_BTN_CAP,		},
 	{ },
 };
 
