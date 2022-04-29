@@ -9,3 +9,5 @@
 **/*.S
 **/*.zst
 .vscode
+src
+pkg
