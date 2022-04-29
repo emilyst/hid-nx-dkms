@@ -427,7 +427,7 @@ static const char * const nx_con_player_led_names[] = {
 /* Each physical controller is associated with a nx_con struct */
 struct nx_con {
 	struct hid_device *hdev;
-	struct input_dev *input;
+	struct input_dev *idev;
 	struct led_classdev leds[NX_CON_NUM_LEDS]; /* player leds */
 	struct led_classdev home_led;
 	enum nx_con_state state;
@@ -482,7 +482,7 @@ struct nx_con {
 	unsigned short rumble_zero_countdown;
 
 	/* imu */
-	struct input_dev *imu_input;
+	struct input_dev *imu_idev;
 	bool imu_first_packet_received; /* helps in initiating timestamp */
 	unsigned int imu_timestamp_us; /* timestamp we report to userspace */
 	unsigned int imu_last_pkt_ms; /* used to calc imu report delta */
@@ -535,13 +535,6 @@ static inline bool nx_con_device_is_gencon(struct nx_con *con)
 static inline bool nx_con_device_is_n64con(struct nx_con *con)
 {
 	return con->hdev->product == USB_DEVICE_ID_NINTENDO_N64CON;
-}
-
-static inline bool nx_con_device_is_any_joycon(struct nx_con *con)
-{
-	return nx_con_device_is_right_joycon(con) ||
-	       nx_con_device_is_left_joycon(con) ||
-	       nx_con_device_is_chrggrip(con);
 }
 
 static inline bool nx_con_device_has_usb(struct nx_con *con)
@@ -1153,10 +1146,10 @@ static void nx_con_input_report_parse_imu_data(struct nx_con *con,
 	}
 }
 
-static void nx_con_parse_imu_report(struct nx_con *con, struct nx_con_input_report *rep)
+static void nx_con_report_imu(struct nx_con *con, struct nx_con_input_report *rep)
 {
 	struct nx_con_imu_data imu_data[3] = {0}; /* 3 reports per packet */
-	struct input_dev *idev = con->imu_input;
+	struct input_dev *idev = con->imu_idev;
 	unsigned int msecs = jiffies_to_msecs(jiffies);
 	unsigned int last_msecs = con->imu_last_pkt_ms;
 	int i;
@@ -1356,15 +1349,13 @@ static void nx_con_parse_imu_report(struct nx_con *con, struct nx_con_input_repo
 	}
 }
 
-static void nx_con_parse_report(struct nx_con *con, struct nx_con_input_report *rep)
+static void nx_con_handle_rumble_report(struct nx_con *con, struct nx_con_input_report *rep)
 {
-	struct input_dev *dev = con->input;
 	unsigned long flags;
-	u8 tmp;
-	u32 btns;
 	unsigned long msecs = jiffies_to_msecs(jiffies);
 
 	spin_lock_irqsave(&con->lock, flags);
+
 	if (IS_ENABLED(CONFIG_NINTENDO_FF) && rep->vibrator_report &&
 	    (msecs - con->rumble_msecs) >= NX_CON_RUMBLE_PERIOD_MS &&
 	    (con->rumble_queue_head != con->rumble_queue_tail ||
@@ -1380,11 +1371,21 @@ static void nx_con_parse_report(struct nx_con *con, struct nx_con_input_report *
 		queue_work(con->rumble_queue, &con->rumble_worker);
 	}
 
-	/* Parse the battery status */
+	spin_unlock_irqrestore(&con->lock, flags);
+}
+
+static void nx_con_parse_battery_status(struct nx_con *con, struct nx_con_input_report *rep)
+{
+	u8 tmp;
+	unsigned long flags;
+
+	spin_lock_irqsave(&con->lock, flags);
+
 	tmp = rep->bat_con;
 	con->host_powered = tmp & BIT(0);
 	con->battery_charging = tmp & BIT(4);
 	tmp = tmp >> 5;
+
 	switch (tmp) {
 	case 0: /* empty */
 		con->battery_capacity = POWER_SUPPLY_CAPACITY_LEVEL_CRITICAL;
@@ -1406,192 +1407,245 @@ static void nx_con_parse_report(struct nx_con *con, struct nx_con_input_report *
 		hid_warn(con->hdev, "Invalid battery status\n");
 		break;
 	}
+
 	spin_unlock_irqrestore(&con->lock, flags);
+}
 
-	btns = hid_field_extract(con->hdev, rep->button_status, 0, 24);
+static void nx_con_report_left_stick_inputs(struct nx_con *con,
+					    struct nx_con_input_report *rep)
+{
+	u16 raw_x;
+	u16 raw_y;
+	s32 x;
+	s32 y;
 
-	if (nx_con_type_has_left_controls(con)) {
-		u16 raw_x;
-		u16 raw_y;
-		s32 x;
-		s32 y;
+	raw_x = hid_field_extract(con->hdev, rep->left_stick, 0, 12);
+	raw_y = hid_field_extract(con->hdev, rep->left_stick + 1, 4, 12);
 
-		raw_x = hid_field_extract(con->hdev, rep->left_stick, 0, 12);
-		raw_y = hid_field_extract(con->hdev, rep->left_stick + 1, 4, 12);
+	x = nx_con_map_stick_val(&con->left_stick_cal_x, raw_x);
+	y = -nx_con_map_stick_val(&con->left_stick_cal_y, raw_y);
 
-		x = nx_con_map_stick_val(&con->left_stick_cal_x, raw_x);
-		y = -nx_con_map_stick_val(&con->left_stick_cal_y, raw_y);
+	input_report_abs(con->idev, ABS_X, x);
+	input_report_abs(con->idev, ABS_Y, y);
+}
 
-		input_report_abs(dev, ABS_X, x);
-		input_report_abs(dev, ABS_Y, y);
+static void nx_con_report_right_stick_inputs(struct nx_con *con,
+					     struct nx_con_input_report *rep)
+{
+	u16 raw_x;
+	u16 raw_y;
+	s32 x;
+	s32 y;
 
-		input_report_key(dev, BTN_TL, btns & NX_CON_BTN_L);
-		input_report_key(dev, BTN_TL2, btns & NX_CON_BTN_ZL);
-		input_report_key(dev, BTN_SELECT, btns & NX_CON_BTN_MINUS);
-		input_report_key(dev, BTN_THUMBL, btns & NX_CON_BTN_LSTICK);
-		input_report_key(dev, BTN_Z, btns & NX_CON_BTN_CAP);
+	raw_x = hid_field_extract(con->hdev, rep->right_stick, 0, 12);
+	raw_y = hid_field_extract(con->hdev, rep->right_stick + 1, 4, 12);
 
-		if (nx_con_type_is_any_joycon(con)) {
-			/* Report the S buttons as the non-existent triggers */
-			input_report_key(dev, BTN_TR, btns & NX_CON_BTN_SL_L);
-			input_report_key(dev, BTN_TR2, btns & NX_CON_BTN_SR_L);
+	x = nx_con_map_stick_val(&con->right_stick_cal_x, raw_x);
+	y = -nx_con_map_stick_val(&con->right_stick_cal_y, raw_y);
 
-			/* Report d-pad as digital buttons for the joy-cons */
-			input_report_key(dev, BTN_DPAD_DOWN, btns & NX_CON_BTN_DOWN);
-			input_report_key(dev, BTN_DPAD_UP, btns & NX_CON_BTN_UP);
-			input_report_key(dev, BTN_DPAD_RIGHT, btns & NX_CON_BTN_RIGHT);
-			input_report_key(dev, BTN_DPAD_LEFT, btns & NX_CON_BTN_LEFT);
-		} else {
-			int hatx = 0;
-			int haty = 0;
+	input_report_abs(con->idev, ABS_RX, x);
+	input_report_abs(con->idev, ABS_RY, y);
+}
 
-			/* d-pad x */
-			if (btns & NX_CON_BTN_LEFT)
-				hatx = -1;
-			else if (btns & NX_CON_BTN_RIGHT)
-				hatx = 1;
-			input_report_abs(dev, ABS_HAT0X, hatx);
+static void nx_con_report_dpad_inputs(struct nx_con *con,
+				      struct nx_con_input_report *rep)
+{
+	int hatx = 0;
+	int haty = 0;
+	u32 btns = hid_field_extract(con->hdev, rep->button_status, 0, 24);
 
-			/* d-pad y */
-			if (btns & NX_CON_BTN_UP)
-				haty = -1;
-			else if (btns & NX_CON_BTN_DOWN)
-				haty = 1;
-			input_report_abs(dev, ABS_HAT0Y, haty);
-		}
+	if (btns & NX_CON_BTN_LEFT)
+		hatx = -1;
+	else if (btns & NX_CON_BTN_RIGHT)
+		hatx = 1;
+
+	if (btns & NX_CON_BTN_UP)
+		haty = -1;
+	else if (btns & NX_CON_BTN_DOWN)
+		haty = 1;
+
+	input_report_abs(con->idev, ABS_HAT0X, hatx);
+	input_report_abs(con->idev, ABS_HAT0Y, haty);
+}
+
+static void nx_con_report_left_joycon_button_inputs(struct nx_con *con,
+						    struct nx_con_input_report *rep)
+{
+	u32 btns = hid_field_extract(con->hdev, rep->button_status, 0, 24);
+
+	/* Report d-pad as digital buttons */
+	input_report_key(con->idev, BTN_DPAD_DOWN, btns & NX_CON_BTN_DOWN);
+	input_report_key(con->idev, BTN_DPAD_UP, btns & NX_CON_BTN_UP);
+	input_report_key(con->idev, BTN_DPAD_RIGHT, btns & NX_CON_BTN_RIGHT);
+	input_report_key(con->idev, BTN_DPAD_LEFT, btns & NX_CON_BTN_LEFT);
+
+	input_report_key(con->idev, BTN_SELECT, btns & NX_CON_BTN_MINUS);
+	input_report_key(con->idev, BTN_1, btns & NX_CON_BTN_CAP);
+	input_report_key(con->idev, BTN_THUMBL, btns & NX_CON_BTN_LSTICK);
+	input_report_key(con->idev, BTN_TL, btns & NX_CON_BTN_L);
+	input_report_key(con->idev, BTN_TL2, btns & NX_CON_BTN_ZL);
+
+	/* Report the non-existent *right* triggers as *left* S buttons */
+	input_report_key(con->idev, BTN_TR, btns & NX_CON_BTN_SL_L);
+	input_report_key(con->idev, BTN_TR2, btns & NX_CON_BTN_SR_L);
+}
+
+static void nx_con_report_right_joycon_button_inputs(struct nx_con *con,
+						     struct nx_con_input_report *rep)
+{
+	u32 btns = hid_field_extract(con->hdev, rep->button_status, 0, 24);
+
+	input_report_key(con->idev, BTN_START, btns & NX_CON_BTN_PLUS);
+	input_report_key(con->idev, BTN_0, btns & NX_CON_BTN_HOME);
+	input_report_key(con->idev, BTN_THUMBR, btns & NX_CON_BTN_RSTICK);
+	input_report_key(con->idev, BTN_SOUTH, btns & NX_CON_BTN_B);
+	input_report_key(con->idev, BTN_EAST, btns & NX_CON_BTN_A);
+	input_report_key(con->idev, BTN_NORTH, btns & NX_CON_BTN_X);
+	input_report_key(con->idev, BTN_WEST, btns & NX_CON_BTN_Y);
+	input_report_key(con->idev, BTN_TR, btns & NX_CON_BTN_R);
+	input_report_key(con->idev, BTN_TR2, btns & NX_CON_BTN_ZR);
+
+	/* Report the non-existent *left* triggers as *right* S buttons */
+	input_report_key(con->idev, BTN_TL, btns & NX_CON_BTN_SL_R);
+	input_report_key(con->idev, BTN_TL2, btns & NX_CON_BTN_SR_R);
+}
+
+static void nx_con_report_procon_button_inputs(struct nx_con *con,
+					       struct nx_con_input_report *rep)
+{
+	u32 btns = hid_field_extract(con->hdev, rep->button_status, 0, 24);
+
+	input_report_key(con->idev, BTN_START, btns & NX_CON_BTN_PLUS);
+	input_report_key(con->idev, BTN_SELECT, btns & NX_CON_BTN_MINUS);
+	input_report_key(con->idev, BTN_0, btns & NX_CON_BTN_HOME);
+	input_report_key(con->idev, BTN_1, btns & NX_CON_BTN_CAP);
+	input_report_key(con->idev, BTN_THUMBL, btns & NX_CON_BTN_LSTICK);
+	input_report_key(con->idev, BTN_THUMBR, btns & NX_CON_BTN_RSTICK);
+	input_report_key(con->idev, BTN_SOUTH, btns & NX_CON_BTN_B);
+	input_report_key(con->idev, BTN_EAST, btns & NX_CON_BTN_A);
+	input_report_key(con->idev, BTN_NORTH, btns & NX_CON_BTN_X);
+	input_report_key(con->idev, BTN_WEST, btns & NX_CON_BTN_Y);
+	input_report_key(con->idev, BTN_TL, btns & NX_CON_BTN_L);
+	input_report_key(con->idev, BTN_TL2, btns & NX_CON_BTN_ZL);
+	input_report_key(con->idev, BTN_TR, btns & NX_CON_BTN_R);
+	input_report_key(con->idev, BTN_TR2, btns & NX_CON_BTN_ZR);
+}
+
+static void nx_con_report_nescon_button_inputs(struct nx_con *con,
+					       struct nx_con_input_report *rep)
+{
+	u32 btns = hid_field_extract(con->hdev, rep->button_status, 0, 24);
+
+	input_report_key(con->idev, BTN_SELECT, btns & NX_CON_BTN_MINUS);
+	input_report_key(con->idev, BTN_START, btns & NX_CON_BTN_PLUS);
+	input_report_key(con->idev, BTN_SOUTH, btns & NX_CON_BTN_A);
+	input_report_key(con->idev, BTN_EAST, btns & NX_CON_BTN_B);
+	input_report_key(con->idev, BTN_TL, btns & NX_CON_BTN_L);
+	input_report_key(con->idev, BTN_TR, btns & NX_CON_BTN_R);
+}
+
+static void nx_con_report_snescon_button_inputs(struct nx_con *con,
+						struct nx_con_input_report *rep)
+{
+	u32 btns = hid_field_extract(con->hdev, rep->button_status, 0, 24);
+
+	input_report_key(con->idev, BTN_SELECT, btns & NX_CON_BTN_MINUS);
+	input_report_key(con->idev, BTN_START, btns & NX_CON_BTN_PLUS);
+
+	/* these two are mixed up for some reason */
+	input_report_key(con->idev, BTN_SOUTH, btns & NX_CON_BTN_A);
+	input_report_key(con->idev, BTN_EAST, btns & NX_CON_BTN_B);
+
+	input_report_key(con->idev, BTN_NORTH, btns & NX_CON_BTN_X);
+	input_report_key(con->idev, BTN_WEST, btns & NX_CON_BTN_Y);
+	input_report_key(con->idev, BTN_TL, btns & NX_CON_BTN_L);
+	input_report_key(con->idev, BTN_TR, btns & NX_CON_BTN_R);
+	input_report_key(con->idev, BTN_TL2, btns & NX_CON_BTN_ZL);
+	input_report_key(con->idev, BTN_TR2, btns & NX_CON_BTN_ZR);
+}
+
+static void nx_con_report_gencon_button_inputs(struct nx_con *con,
+					       struct nx_con_input_report *rep)
+{
+	u32 btns = hid_field_extract(con->hdev, rep->button_status, 0, 24);
+
+	input_report_key(con->idev, BTN_SELECT, btns & NX_CON_BTN_ZR);
+	input_report_key(con->idev, BTN_START, btns & NX_CON_BTN_PLUS);
+	input_report_key(con->idev, BTN_0, btns & NX_CON_BTN_HOME);
+	input_report_key(con->idev, BTN_1, btns & NX_CON_BTN_CAP);
+	input_report_key(con->idev, BTN_EAST, btns & NX_CON_BTN_B);
+	input_report_key(con->idev, BTN_SOUTH, btns & NX_CON_BTN_A);
+	input_report_key(con->idev, BTN_WEST, btns & NX_CON_BTN_R);
+}
+
+static void nx_con_report_n64con_button_inputs(struct nx_con *con,
+					       struct nx_con_input_report *rep)
+{
+	u32 btns = hid_field_extract(con->hdev, rep->button_status, 0, 24);
+
+	input_report_key(con->idev, BTN_START, btns & NX_CON_BTN_PLUS);
+	input_report_key(con->idev, BTN_0, btns & NX_CON_BTN_HOME);
+	input_report_key(con->idev, BTN_1, btns & NX_CON_BTN_CAP);
+	input_report_key(con->idev, BTN_B, btns & NX_CON_BTN_B);
+	input_report_key(con->idev, BTN_A, btns & NX_CON_BTN_A);
+
+	/* C buttons */
+	input_report_key(con->idev, BTN_DPAD_UP, btns & NX_CON_BTN_Y);
+	input_report_key(con->idev, BTN_DPAD_DOWN, btns & NX_CON_BTN_ZR);
+	input_report_key(con->idev, BTN_DPAD_LEFT, btns & NX_CON_BTN_X);
+	input_report_key(con->idev, BTN_DPAD_RIGHT, btns & NX_CON_BTN_MINUS);
+
+	input_report_key(con->idev, BTN_Z, btns & NX_CON_BTN_ZL);
+	input_report_key(con->idev, BTN_TL, btns & NX_CON_BTN_L);
+	input_report_key(con->idev, BTN_TR, btns & NX_CON_BTN_R);
+	input_report_key(con->idev, BTN_TR2, btns & NX_CON_BTN_LSTICK);
+}
+
+static void nx_con_parse_report(struct nx_con *con,
+				struct nx_con_input_report *rep)
+{
+	unsigned long flags;
+
+	if (nx_con_has_rumble(con))
+		nx_con_handle_rumble_report(con, rep);
+
+	nx_con_parse_battery_status(con, rep);
+
+	if (rep->id == NX_CON_INPUT_IMU_DATA && nx_con_has_imu(con))
+		nx_con_report_imu(con, rep);
+
+	if (nx_con_type_is_left_joycon(con)) {
+		nx_con_report_left_stick_inputs(con, rep);
+		nx_con_report_left_joycon_button_inputs(con, rep);
+	} else if (nx_con_type_is_right_joycon(con)) {
+		nx_con_report_right_stick_inputs(con, rep);
+		nx_con_report_right_joycon_button_inputs(con, rep);
+	} else if (nx_con_device_is_chrggrip(con)) {
+		nx_con_report_left_stick_inputs(con, rep);
+		nx_con_report_right_stick_inputs(con, rep);
+		nx_con_report_left_joycon_button_inputs(con, rep);
+		nx_con_report_right_joycon_button_inputs(con, rep);
+	} else if (nx_con_type_is_procon(con)) {
+		nx_con_report_left_stick_inputs(con, rep);
+		nx_con_report_right_stick_inputs(con, rep);
+		nx_con_report_dpad_inputs(con, rep);
+		nx_con_report_procon_button_inputs(con, rep);
+	} else if (nx_con_type_is_any_nescon(con)) {
+		nx_con_report_dpad_inputs(con, rep);
+		nx_con_report_nescon_button_inputs(con, rep);
+	} else if (nx_con_type_is_snescon(con)) {
+		nx_con_report_dpad_inputs(con, rep);
+		nx_con_report_snescon_button_inputs(con, rep);
+	} else if (nx_con_type_is_gencon(con)) {
+		nx_con_report_dpad_inputs(con, rep);
+		nx_con_report_gencon_button_inputs(con, rep);
+	} else if (nx_con_type_is_n64con(con)) {
+		nx_con_report_left_stick_inputs(con, rep);
+		nx_con_report_dpad_inputs(con, rep);
+		nx_con_report_n64con_button_inputs(con, rep);
 	}
-	if (nx_con_type_has_right_controls(con)) {
-		u16 raw_x;
-		u16 raw_y;
-		s32 x;
-		s32 y;
 
-		/* get raw stick values */
-		raw_x = hid_field_extract(con->hdev, rep->right_stick, 0, 12);
-		raw_y = hid_field_extract(con->hdev, rep->right_stick + 1, 4, 12);
-
-		x = nx_con_map_stick_val(&con->right_stick_cal_x, raw_x);
-		y = -nx_con_map_stick_val(&con->right_stick_cal_y, raw_y);
-
-		input_report_abs(dev, ABS_RX, x);
-		input_report_abs(dev, ABS_RY, y);
-
-		input_report_key(dev, BTN_TR, btns & NX_CON_BTN_R);
-		input_report_key(dev, BTN_TR2, btns & NX_CON_BTN_ZR);
-		if (nx_con_type_is_any_joycon(con)) {
-			/* Report the S buttons as the non-existent triggers */
-			input_report_key(dev, BTN_TL, btns & NX_CON_BTN_SL_R);
-			input_report_key(dev, BTN_TL2, btns & NX_CON_BTN_SR_R);
-		}
-		input_report_key(dev, BTN_START, btns & NX_CON_BTN_PLUS);
-		input_report_key(dev, BTN_THUMBR, btns & NX_CON_BTN_RSTICK);
-		input_report_key(dev, BTN_MODE, btns & NX_CON_BTN_HOME);
-		input_report_key(dev, BTN_WEST, btns & NX_CON_BTN_Y);
-		input_report_key(dev, BTN_NORTH, btns & NX_CON_BTN_X);
-		input_report_key(dev, BTN_EAST, btns & NX_CON_BTN_A);
-		input_report_key(dev, BTN_SOUTH, btns & NX_CON_BTN_B);
-	}
-
-	if (nx_con_type_is_n64con(con)) {
-		u16 raw_x;
-		u16 raw_y;
-		s32 x;
-		s32 y;
-		int hatx = 0;
-		int haty = 0;
-
-		/* d-pad x */
-		if (btns & NX_CON_BTN_LEFT)
-			hatx = -1;
-		else if (btns & NX_CON_BTN_RIGHT)
-			hatx = 1;
-		input_report_abs(dev, ABS_HAT0X, hatx);
-
-		/* d-pad y */
-		if (btns & NX_CON_BTN_UP)
-			haty = -1;
-		else if (btns & NX_CON_BTN_DOWN)
-			haty = 1;
-		input_report_abs(dev, ABS_HAT0Y, haty);
-
-		raw_x = hid_field_extract(con->hdev, rep->left_stick, 0, 12);
-		raw_y = hid_field_extract(con->hdev, rep->left_stick + 1, 4, 12);
-
-		x = nx_con_map_stick_val(&con->left_stick_cal_x, raw_x);
-		y = -nx_con_map_stick_val(&con->left_stick_cal_y, raw_y);
-
-		input_report_abs(dev, ABS_X, x);
-		input_report_abs(dev, ABS_Y, y);
-
-		input_report_key(dev, BTN_START, btns & NX_CON_BTN_PLUS);
-		input_report_key(dev, BTN_B, btns & NX_CON_BTN_B);
-		input_report_key(dev, BTN_A, btns & NX_CON_BTN_A);
-		input_report_key(dev, BTN_Z, btns & NX_CON_BTN_ZL);
-
-		/* C buttons */
-		input_report_key(dev, BTN_DPAD_UP, btns & NX_CON_BTN_Y);
-		input_report_key(dev, BTN_DPAD_DOWN, btns & NX_CON_BTN_ZR);
-		input_report_key(dev, BTN_DPAD_LEFT, btns & NX_CON_BTN_X);
-		input_report_key(dev, BTN_DPAD_RIGHT, btns & NX_CON_BTN_MINUS);
-
-		input_report_key(dev, BTN_TL, btns & NX_CON_BTN_L);
-		input_report_key(dev, BTN_TR, btns & NX_CON_BTN_R);
-		input_report_key(dev, BTN_TR2, btns & NX_CON_BTN_LSTICK);
-		input_report_key(dev, BTN_0, btns & NX_CON_BTN_HOME);
-		input_report_key(dev, BTN_1, btns & NX_CON_BTN_CAP);
-	}
-
-	if (nx_con_type_is_any_nescon(con) ||
-	    nx_con_type_is_snescon(con) ||
-	    nx_con_type_is_gencon(con)) {
-		s8 x;
-		s8 y;
-
-		if (btns & NX_CON_BTN_LEFT)
-			x = -1;
-		else if (btns & NX_CON_BTN_RIGHT)
-			x = 1;
-
-		if (btns & NX_CON_BTN_UP)
-			y = -1;
-		else if (btns & NX_CON_BTN_DOWN)
-			y = 1;
-
-		input_report_abs(dev, ABS_HAT0X, x);
-		input_report_abs(dev, ABS_HAT0Y, y);
-
-		if (nx_con_type_is_any_nescon(con)) {
-			input_report_key(dev, BTN_SELECT, btns & NX_CON_BTN_MINUS);
-			input_report_key(dev, BTN_START, btns & NX_CON_BTN_PLUS);
-			input_report_key(dev, BTN_EAST, btns & NX_CON_BTN_B);
-			input_report_key(dev, BTN_SOUTH, btns & NX_CON_BTN_A);
-			input_report_key(dev, BTN_TL, btns & NX_CON_BTN_L);
-			input_report_key(dev, BTN_TR, btns & NX_CON_BTN_R);
-		} else if (nx_con_type_is_snescon(con)) {
-			input_report_key(dev, BTN_SELECT, btns & NX_CON_BTN_MINUS);
-			input_report_key(dev, BTN_START, btns & NX_CON_BTN_PLUS);
-
-			/* these two are mixed up for some reason */
-			input_report_key(dev, BTN_EAST, btns & NX_CON_BTN_B);
-			input_report_key(dev, BTN_SOUTH, btns & NX_CON_BTN_A);
-
-			input_report_key(dev, BTN_NORTH, btns & NX_CON_BTN_X);
-			input_report_key(dev, BTN_WEST, btns & NX_CON_BTN_Y);
-			input_report_key(dev, BTN_TL, btns & NX_CON_BTN_L);
-			input_report_key(dev, BTN_TR, btns & NX_CON_BTN_R);
-			input_report_key(dev, BTN_TL2, btns & NX_CON_BTN_ZL);
-			input_report_key(dev, BTN_TR2, btns & NX_CON_BTN_ZR);
-		} else if (nx_con_type_is_gencon(con)) {
-			input_report_key(dev, BTN_SELECT, btns & NX_CON_BTN_ZR);
-			input_report_key(dev, BTN_START, btns & NX_CON_BTN_PLUS);
-			input_report_key(dev, BTN_EAST, btns & NX_CON_BTN_B);
-			input_report_key(dev, BTN_SOUTH, btns & NX_CON_BTN_A);
-			input_report_key(dev, BTN_WEST, btns & NX_CON_BTN_R);
-			input_report_key(dev, BTN_MODE, btns & NX_CON_BTN_HOME);
-		}
-	}
-
-	input_sync(dev);
+	input_sync(con->idev);
 
 	/*
 	 * Immediately after receiving a report is the most reliable time to
@@ -1604,10 +1658,6 @@ static void nx_con_parse_report(struct nx_con *con, struct nx_con_input_report *
 		spin_unlock_irqrestore(&con->lock, flags);
 		wake_up(&con->wait);
 	}
-
-	/* parse IMU data if present */
-	if (rep->id == NX_CON_INPUT_IMU_DATA && nx_con_has_imu(con))
-		nx_con_parse_imu_report(con, rep);
 }
 
 static int nx_con_send_rumble_data(struct nx_con *con)
@@ -1788,11 +1838,11 @@ static int nx_con_set_rumble(struct nx_con *con,
 	return 0;
 }
 
-static int nx_con_play_effect(struct input_dev *dev,
-			       void *data,
-			       struct ff_effect *effect)
+static int nx_con_play_effect(struct input_dev *idev, 
+                              void *data,
+			      struct ff_effect *effect)
 {
-	struct nx_con *con = input_get_drvdata(dev);
+	struct nx_con *con = input_get_drvdata(idev);
 
 	if (effect->type != FF_RUMBLE)
 		return 0;
@@ -1804,25 +1854,220 @@ static int nx_con_play_effect(struct input_dev *dev,
 }
 #endif /* IS_ENABLED(CONFIG_NINTENDO_FF) */
 
-static const unsigned int nx_con_button_inputs_l[] = {
-	BTN_SELECT, BTN_Z, BTN_THUMBL,
-	BTN_TL, BTN_TL2,
-	0 /* 0 signals end of array */
+static void nx_con_configure_left_stick_inputs(struct input_dev *idev)
+{
+	input_set_abs_params(idev,
+			     ABS_X,
+			     -NX_CON_MAX_STICK_MAG,
+			     NX_CON_MAX_STICK_MAG,
+			     NX_CON_STICK_FUZZ,
+			     NX_CON_STICK_FLAT);
+	input_set_abs_params(idev,
+			     ABS_Y,
+			     -NX_CON_MAX_STICK_MAG,
+			     NX_CON_MAX_STICK_MAG,
+			     NX_CON_STICK_FUZZ,
+			     NX_CON_STICK_FLAT);
+}
+
+static void nx_con_configure_right_stick_inputs(struct input_dev *idev)
+{
+	input_set_abs_params(idev,
+			     ABS_RX,
+			     -NX_CON_MAX_STICK_MAG,
+			     NX_CON_MAX_STICK_MAG,
+			     NX_CON_STICK_FUZZ,
+			     NX_CON_STICK_FLAT);
+	input_set_abs_params(idev,
+			     ABS_RY,
+			     -NX_CON_MAX_STICK_MAG,
+			     NX_CON_MAX_STICK_MAG,
+			     NX_CON_STICK_FUZZ,
+			     NX_CON_STICK_FLAT);
+}
+
+static void nx_con_configure_dpad_inputs(struct input_dev *idev)
+{
+	input_set_abs_params(idev,
+			     ABS_HAT0X,
+			     -NX_CON_MAX_DPAD_MAG,
+			     NX_CON_MAX_DPAD_MAG,
+			     NX_CON_DPAD_FUZZ,
+			     NX_CON_DPAD_FLAT);
+	input_set_abs_params(idev,
+			     ABS_HAT0Y,
+			     -NX_CON_MAX_DPAD_MAG,
+			     NX_CON_MAX_DPAD_MAG,
+			     NX_CON_DPAD_FUZZ,
+			     NX_CON_DPAD_FLAT);
+}
+
+static void nx_con_configure_button_inputs(struct input_dev *idev,
+                                           const unsigned int buttons[])
+{
+	int i = 0;
+	for (; buttons[i] > 0; i++)
+		input_set_capability(idev, EV_KEY, buttons[i]);
+}
+
+static void nx_con_configure_rumble(struct nx_con *con)
+{
+#if IS_ENABLED(CONFIG_NINTENDO_FF)
+	input_set_capability(con->idev, EV_FF, FF_RUMBLE);
+	input_ff_create_memless(con->idev, NULL, nx_con_play_effect);
+
+	con->rumble_ll_freq = NX_CON_RUMBLE_DFLT_LOW_FREQ;
+	con->rumble_lh_freq = NX_CON_RUMBLE_DFLT_HIGH_FREQ;
+	con->rumble_rl_freq = NX_CON_RUMBLE_DFLT_LOW_FREQ;
+	con->rumble_rh_freq = NX_CON_RUMBLE_DFLT_HIGH_FREQ;
+
+	nx_con_clamp_rumble_freqs(con);
+	nx_con_set_rumble(con, 0, 0, false);
+
+	con->rumble_msecs = jiffies_to_msecs(jiffies);
+#endif
+}
+
+static int nx_con_register_imu_input_device(struct nx_con *con)
+{
+	struct hid_device *hdev;
+	const char *imu_name;
+	int ret;
+
+	hdev = con->hdev;
+
+	if (!(con->imu_idev = devm_input_allocate_device(&hdev->dev)))
+		return -ENOMEM;
+
+	con->imu_idev->id.bustype = hdev->bus;
+	con->imu_idev->id.vendor = hdev->vendor;
+	con->imu_idev->id.product = hdev->product;
+	con->imu_idev->id.version = hdev->version;
+	con->imu_idev->uniq = con->mac_addr_str;
+
+	imu_name = devm_kasprintf(&hdev->dev, GFP_KERNEL, "%s (IMU)", con->idev->name);
+	if (!imu_name)
+		return -ENOMEM;
+
+	con->imu_idev->name = imu_name;
+
+	input_set_drvdata(con->imu_idev, con);
+
+	input_set_abs_params(con->imu_idev,
+			     ABS_X,
+			     -NX_CON_IMU_MAX_ACCEL_MAG,
+			     NX_CON_IMU_MAX_ACCEL_MAG,
+			     NX_CON_IMU_ACCEL_FUZZ,
+			     NX_CON_IMU_ACCEL_FLAT);
+	input_set_abs_params(con->imu_idev,
+			     ABS_Y,
+			     -NX_CON_IMU_MAX_ACCEL_MAG,
+			     NX_CON_IMU_MAX_ACCEL_MAG,
+			     NX_CON_IMU_ACCEL_FUZZ,
+			     NX_CON_IMU_ACCEL_FLAT);
+	input_set_abs_params(con->imu_idev,
+			     ABS_Z,
+			     -NX_CON_IMU_MAX_ACCEL_MAG,
+			     NX_CON_IMU_MAX_ACCEL_MAG,
+			     NX_CON_IMU_ACCEL_FUZZ,
+			     NX_CON_IMU_ACCEL_FLAT);
+
+	input_abs_set_res(con->imu_idev, ABS_X, NX_CON_IMU_ACCEL_RES_PER_G);
+	input_abs_set_res(con->imu_idev, ABS_Y, NX_CON_IMU_ACCEL_RES_PER_G);
+	input_abs_set_res(con->imu_idev, ABS_Z, NX_CON_IMU_ACCEL_RES_PER_G);
+
+	input_set_abs_params(con->imu_idev,
+			     ABS_RX,
+			     -NX_CON_IMU_MAX_GYRO_MAG,
+			     NX_CON_IMU_MAX_GYRO_MAG,
+			     NX_CON_IMU_GYRO_FUZZ,
+			     NX_CON_IMU_GYRO_FLAT);
+	input_set_abs_params(con->imu_idev,
+			     ABS_RY,
+			     -NX_CON_IMU_MAX_GYRO_MAG,
+			     NX_CON_IMU_MAX_GYRO_MAG,
+			     NX_CON_IMU_GYRO_FUZZ,
+			     NX_CON_IMU_GYRO_FLAT);
+	input_set_abs_params(con->imu_idev,
+			     ABS_RZ,
+			     -NX_CON_IMU_MAX_GYRO_MAG,
+			     NX_CON_IMU_MAX_GYRO_MAG,
+			     NX_CON_IMU_GYRO_FUZZ,
+			     NX_CON_IMU_GYRO_FLAT);
+
+	input_abs_set_res(con->imu_idev, ABS_RX, NX_CON_IMU_GYRO_RES_PER_DPS);
+	input_abs_set_res(con->imu_idev, ABS_RY, NX_CON_IMU_GYRO_RES_PER_DPS);
+	input_abs_set_res(con->imu_idev, ABS_RZ, NX_CON_IMU_GYRO_RES_PER_DPS);
+
+	__set_bit(EV_MSC, con->imu_idev->evbit);
+	__set_bit(MSC_TIMESTAMP, con->imu_idev->mscbit);
+	__set_bit(INPUT_PROP_ACCELEROMETER, con->imu_idev->propbit);
+
+	if ((ret = input_register_device(con->imu_idev)))
+		return ret;
+
+	return 0;
+}
+
+/*
+ * The unused *right*-side triggers become the SL/SR triggers for the *left*
+ * Joy-Con.
+ *
+ * D-pad is configured as buttons for the left Joy-Con only!
+ */
+static const unsigned int left_joycon_buttons[] = {
+	BTN_DPAD_UP,	/* up */
+	BTN_DPAD_DOWN,	/* down */
+	BTN_DPAD_LEFT,	/* left */
+	BTN_DPAD_RIGHT,	/* right */
+	BTN_SELECT,	/* "-" */
+	BTN_1,		/* "Capture" */
+	BTN_THUMBL,	/* left stick button */
+	BTN_TL,		/* "L" */
+	BTN_TL2,	/* "ZL" */
+	BTN_TR,		/* "SL" */
+	BTN_TR2,	/* "SR" */
+	0
 };
 
-static const unsigned int nx_con_button_inputs_r[] = {
-	BTN_START, BTN_MODE, BTN_THUMBR,
-	BTN_SOUTH, BTN_EAST, BTN_NORTH, BTN_WEST,
-	BTN_TR, BTN_TR2,
-	0 /* 0 signals end of array */
+/*
+ * The unused *left*-side triggers become the SL/SR triggers for the *right*
+ * Joy-Con.
+ */
+static const unsigned int right_joycon_buttons[] = {
+	BTN_START,	/* "+" */
+	BTN_0,		/* "Home" */
+	BTN_THUMBR,	/* right stick button */
+	BTN_SOUTH,	/* "B" */
+	BTN_EAST,	/* "A" */
+	BTN_NORTH,	/* "X" */
+	BTN_WEST,	/* "Y" */
+	BTN_TR,		/* "R" */
+	BTN_TR2,	/* "ZR" */
+	BTN_TL,		/* "SL" */
+	BTN_TL2,	/* "SR" */
+	0
 };
 
-/* We report joy-con d-pad inputs as buttons and pro controller as a hat. */
-static const unsigned int nx_con_dpad_inputs_jc[] = {
-	BTN_DPAD_UP, BTN_DPAD_DOWN, BTN_DPAD_LEFT, BTN_DPAD_RIGHT,
+static const unsigned int procon_buttons[] = {
+	BTN_START,	/* "+" */
+	BTN_SELECT,	/* "-" */
+	BTN_0,		/* "Home" */
+	BTN_1,		/* "Capture" */
+	BTN_THUMBL,	/* left stick button */
+	BTN_THUMBR,	/* right stick button */
+	BTN_SOUTH,	/* "B" */
+	BTN_EAST,	/* "A" */
+	BTN_NORTH,	/* "X" */
+	BTN_WEST,	/* "Y" */
+	BTN_TL,		/* "L" */
+	BTN_TL2,	/* "ZL" */
+	BTN_TR,		/* "R" */
+	BTN_TR2,	/* "ZR" */
+	0,
 };
 
-static const unsigned int nescon_button_inputs[] = {
+static const unsigned int nescon_buttons[] = {
 	BTN_SELECT,	/* "Select" */
 	BTN_START,	/* "Start" */
 	BTN_SOUTH,	/* "B" */
@@ -1832,7 +2077,7 @@ static const unsigned int nescon_button_inputs[] = {
 	0		/* 0 signals end of array */
 };
 
-static const unsigned int snescon_button_inputs[] = {
+static const unsigned int snescon_buttons[] = {
 	BTN_SELECT,	/* "Select" */
 	BTN_START,	/* "Start" */
 	BTN_SOUTH,	/* "B" */
@@ -1847,25 +2092,27 @@ static const unsigned int snescon_button_inputs[] = {
 };
 
 /*
- * Note: Button order is determined by the numerical order of the constants (see
- * `uapi/linux/input-event-codes.h`).
- *
- * A, B, and C are mapped positionally, rather than by label (e.g., "A" gets
- * assigned to BTN_EAST instead of BTN_A).
+ * "A", "B", and "C" are mapped positionally, rather than by label (e.g., "A"
+ * gets assigned to BTN_EAST instead of BTN_A).
  */
-static const unsigned int gencon_button_inputs[] = {
+static const unsigned int gencon_buttons[] = {
 	BTN_SELECT,	/* "Mode" */
 	BTN_START,	/* "Start" */
+	BTN_0,		/* "Home" */
+	BTN_1,		/* "Capture" */
 	BTN_EAST,	/* "A" */
 	BTN_SOUTH,	/* "B" */
 	BTN_WEST,	/* "C" */
-	BTN_MODE,	/* Home */
-	/* BTN_???, */	/* Capture */
 	0		/* 0 signals end of array */
 };
 
-static const unsigned int n64con_button_inputs[] = {
+/*
+ * N64's C buttons get assigned to d-pad directions and registered as buttons.
+ */
+static const unsigned int n64con_buttons[] = {
 	BTN_START,	/* "Start" */
+	BTN_0,		/* "Home" */
+	BTN_1,		/* "Capture" */
 	BTN_B,		/* "B" */
 	BTN_A,		/* "A" */
 	BTN_DPAD_UP,	/* "C" up */
@@ -1876,249 +2123,67 @@ static const unsigned int n64con_button_inputs[] = {
 	BTN_TL,		/* "L" */
 	BTN_TR,		/* "R" */
 	BTN_TR2,	/* "ZR" */
-	BTN_0,		/* "Home" */
-	BTN_1,		/* "Capture" */
 	0		/* 0 signals end of array */
 };
 
 static int nx_con_input_create(struct nx_con *con)
 {
 	struct hid_device *hdev;
-	const char *imu_name;
 	int ret;
-	int i;
 
 	hdev = con->hdev;
 
-	if (!(con->input = devm_input_allocate_device(&hdev->dev)))
+	if (!(con->idev = devm_input_allocate_device(&hdev->dev)))
 		return -ENOMEM;
 
-	con->input->id.bustype = hdev->bus;
-	con->input->id.vendor = hdev->vendor;
-	con->input->id.product = hdev->product;
-	con->input->id.version = hdev->version;
-	con->input->name = hdev->name;
-	con->input->uniq = con->mac_addr_str;
+	con->idev->id.bustype = hdev->bus;
+	con->idev->id.vendor = hdev->vendor;
+	con->idev->id.product = hdev->product;
+	con->idev->id.version = hdev->version;
+	con->idev->name = hdev->name;
+	con->idev->uniq = con->mac_addr_str;
 
-	input_set_drvdata(con->input, con);
+	input_set_drvdata(con->idev, con);
 
-	/* set up sticks and buttons */
-	if (nx_con_type_has_left_controls(con)) {
-		input_set_abs_params(con->input,
-				     ABS_X,
-				     -NX_CON_MAX_STICK_MAG,
-				     NX_CON_MAX_STICK_MAG,
-				     NX_CON_STICK_FUZZ,
-				     NX_CON_STICK_FLAT);
-		input_set_abs_params(con->input,
-				     ABS_Y,
-				     -NX_CON_MAX_STICK_MAG,
-				     NX_CON_MAX_STICK_MAG,
-				     NX_CON_STICK_FUZZ,
-				     NX_CON_STICK_FLAT);
-
-		for (i = 0; nx_con_button_inputs_l[i] > 0; i++)
-			input_set_capability(con->input, EV_KEY, nx_con_button_inputs_l[i]);
-
-		/* configure d-pad differently for joy-con vs pro controller */
-		if (!(nx_con_device_is_procon(con))) {
-			for (i = 0; nx_con_dpad_inputs_jc[i] > 0; i++)
-				input_set_capability(con->input, EV_KEY, nx_con_dpad_inputs_jc[i]);
-		} else {
-			input_set_abs_params(con->input,
-					     ABS_HAT0X,
-					     -NX_CON_MAX_DPAD_MAG,
-					     NX_CON_MAX_DPAD_MAG,
-					     NX_CON_DPAD_FUZZ,
-					     NX_CON_DPAD_FLAT);
-			input_set_abs_params(con->input,
-					     ABS_HAT0Y,
-					     -NX_CON_MAX_DPAD_MAG,
-					     NX_CON_MAX_DPAD_MAG,
-					     NX_CON_DPAD_FUZZ,
-					     NX_CON_DPAD_FLAT);
-		}
-	}
-	if (nx_con_type_has_right_controls(con)) {
-		input_set_abs_params(con->input,
-				     ABS_RX,
-				     -NX_CON_MAX_STICK_MAG,
-				     NX_CON_MAX_STICK_MAG,
-				     NX_CON_STICK_FUZZ,
-				     NX_CON_STICK_FLAT);
-		input_set_abs_params(con->input,
-				     ABS_RY,
-				     -NX_CON_MAX_STICK_MAG,
-				     NX_CON_MAX_STICK_MAG,
-				     NX_CON_STICK_FUZZ,
-				     NX_CON_STICK_FLAT);
-
-		for (i = 0; nx_con_button_inputs_r[i] > 0; i++)
-			input_set_capability(con->input, EV_KEY, nx_con_button_inputs_r[i]);
-	}
-	if (nx_con_type_is_any_nescon(con)) {
-		/* set up dpad hat */
-		input_set_abs_params(con->input, ABS_HAT0X, -1, 1, 0, 0);
-		input_set_abs_params(con->input, ABS_HAT0Y, -1, 1, 0, 0);
-
-		/* set up buttons */
-		for (i = 0; nescon_button_inputs[i] > 0; i++)
-			input_set_capability(con->input, EV_KEY, nescon_button_inputs[i]);
-
-		/* register the device here, we don't need any more setup */
-		if ((ret = input_register_device(con->input)))
-			return ret;
-
-		return 0;
-	}
-	if (nx_con_type_is_snescon(con)) {
-		/* set up dpad hat */
-		input_set_abs_params(con->input, ABS_HAT0X, -1, 1, 0, 0);
-		input_set_abs_params(con->input, ABS_HAT0Y, -1, 1, 0, 0);
-
-		/* set up buttons */
-		for (i = 0; snescon_button_inputs[i] > 0; i++)
-			input_set_capability(con->input, EV_KEY, snescon_button_inputs[i]);
-
-		/* register the device here, we don't need any more setup */
-		if ((ret = input_register_device(con->input)))
-			return ret;
-
-		return 0;
-	}
-	if (nx_con_type_is_gencon(con)) {
-		/* set up dpad hat */
-		input_set_abs_params(con->input, ABS_HAT0X, -1, 1, 0, 0);
-		input_set_abs_params(con->input, ABS_HAT0Y, -1, 1, 0, 0);
-
-		/* set up buttons */
-		for (i = 0; gencon_button_inputs[i] > 0; i++)
-			input_set_capability(con->input, EV_KEY, gencon_button_inputs[i]);
-
-		/* register the device here, we don't need any more setup */
-		if ((ret = input_register_device(con->input)))
-			return ret;
-
-		return 0;
-	}
-	if (nx_con_type_is_n64con(con)) {
-		input_set_abs_params(con->input, ABS_HAT0X, -1, 1, 0, 0);
-		input_set_abs_params(con->input, ABS_HAT0Y, -1, 1, 0, 0);
-
-		input_set_abs_params(con->input,
-				     ABS_X,
-				     -NX_CON_MAX_STICK_MAG,
-				     NX_CON_MAX_STICK_MAG,
-				     NX_CON_STICK_FUZZ,
-				     NX_CON_STICK_FLAT);
-		input_set_abs_params(con->input,
-				     ABS_Y,
-				     -NX_CON_MAX_STICK_MAG,
-				     NX_CON_MAX_STICK_MAG,
-				     NX_CON_STICK_FUZZ,
-				     NX_CON_STICK_FLAT);
-
-		for (i = 0; n64con_button_inputs[i] > 0; i++)
-			input_set_capability(con->input, EV_KEY, n64con_button_inputs[i]);
-	}
-
-	/* Let's report joy-con S triggers separately */
 	if (nx_con_type_is_left_joycon(con)) {
-		input_set_capability(con->input, EV_KEY, BTN_TR);
-		input_set_capability(con->input, EV_KEY, BTN_TR2);
-	} else if (nx_con_type_is_left_joycon(con)) {
-		input_set_capability(con->input, EV_KEY, BTN_TL);
-		input_set_capability(con->input, EV_KEY, BTN_TL2);
+		nx_con_configure_left_stick_inputs(con->idev);
+		nx_con_configure_button_inputs(con->idev, left_joycon_buttons);
+	} else if (nx_con_type_is_right_joycon(con)) {
+		nx_con_configure_right_stick_inputs(con->idev);
+		nx_con_configure_button_inputs(con->idev, right_joycon_buttons);
+	} else if (nx_con_device_is_chrggrip(con)) {
+		nx_con_configure_left_stick_inputs(con->idev);
+		nx_con_configure_right_stick_inputs(con->idev);
+		nx_con_configure_button_inputs(con->idev, left_joycon_buttons);
+		nx_con_configure_button_inputs(con->idev, right_joycon_buttons);
+	} else if (nx_con_type_is_procon(con)) {
+		nx_con_configure_left_stick_inputs(con->idev);
+		nx_con_configure_right_stick_inputs(con->idev);
+		nx_con_configure_dpad_inputs(con->idev);
+		nx_con_configure_button_inputs(con->idev, procon_buttons);
+	} else if (nx_con_type_is_any_nescon(con)) {
+		nx_con_configure_dpad_inputs(con->idev);
+		nx_con_configure_button_inputs(con->idev, nescon_buttons);
+	} else if (nx_con_type_is_snescon(con)) {
+		nx_con_configure_dpad_inputs(con->idev);
+		nx_con_configure_button_inputs(con->idev, snescon_buttons);
+	} else if (nx_con_type_is_gencon(con)) {
+		nx_con_configure_dpad_inputs(con->idev);
+		nx_con_configure_button_inputs(con->idev, gencon_buttons);
+	} else if (nx_con_type_is_n64con(con)) {
+		nx_con_configure_dpad_inputs(con->idev);
+		nx_con_configure_left_stick_inputs(con->idev);
+		nx_con_configure_button_inputs(con->idev, n64con_buttons);
 	}
 
-#if IS_ENABLED(CONFIG_NINTENDO_FF)
-	if (nx_con_has_rumble(con)) {
-		input_set_capability(con->input, EV_FF, FF_RUMBLE);
-		input_ff_create_memless(con->input, NULL, nx_con_play_effect);
-		con->rumble_ll_freq = NX_CON_RUMBLE_DFLT_LOW_FREQ;
-		con->rumble_lh_freq = NX_CON_RUMBLE_DFLT_HIGH_FREQ;
-		con->rumble_rl_freq = NX_CON_RUMBLE_DFLT_LOW_FREQ;
-		con->rumble_rh_freq = NX_CON_RUMBLE_DFLT_HIGH_FREQ;
-		nx_con_clamp_rumble_freqs(con);
-		nx_con_set_rumble(con, 0, 0, false);
-		con->rumble_msecs = jiffies_to_msecs(jiffies);
-	}
-#endif
-
-	if ((ret = input_register_device(con->input)))
+	if (nx_con_has_imu(con) && (ret = nx_con_register_imu_input_device(con)))
 		return ret;
 
-	if (nx_con_has_imu(con)) {
-		if (!(con->imu_input = devm_input_allocate_device(&hdev->dev)))
-			return -ENOMEM;
+	if (nx_con_has_rumble(con))
+		nx_con_configure_rumble(con);
 
-		con->imu_input->id.bustype = hdev->bus;
-		con->imu_input->id.vendor = hdev->vendor;
-		con->imu_input->id.product = hdev->product;
-		con->imu_input->id.version = hdev->version;
-		con->imu_input->uniq = con->mac_addr_str;
-
-		imu_name = devm_kasprintf(&hdev->dev, GFP_KERNEL, "%s (IMU)", con->input->name);
-		if (!imu_name)
-			return -ENOMEM;
-
-		con->imu_input->name = imu_name;
-
-		input_set_drvdata(con->imu_input, con);
-
-		/* configure imu axes */
-		input_set_abs_params(con->imu_input,
-				     ABS_X,
-				     -NX_CON_IMU_MAX_ACCEL_MAG,
-				     NX_CON_IMU_MAX_ACCEL_MAG,
-				     NX_CON_IMU_ACCEL_FUZZ,
-				     NX_CON_IMU_ACCEL_FLAT);
-		input_set_abs_params(con->imu_input,
-				     ABS_Y,
-				     -NX_CON_IMU_MAX_ACCEL_MAG,
-				     NX_CON_IMU_MAX_ACCEL_MAG,
-				     NX_CON_IMU_ACCEL_FUZZ,
-				     NX_CON_IMU_ACCEL_FLAT);
-		input_set_abs_params(con->imu_input,
-				     ABS_Z,
-				     -NX_CON_IMU_MAX_ACCEL_MAG,
-				     NX_CON_IMU_MAX_ACCEL_MAG,
-				     NX_CON_IMU_ACCEL_FUZZ,
-				     NX_CON_IMU_ACCEL_FLAT);
-		input_abs_set_res(con->imu_input, ABS_X, NX_CON_IMU_ACCEL_RES_PER_G);
-		input_abs_set_res(con->imu_input, ABS_Y, NX_CON_IMU_ACCEL_RES_PER_G);
-		input_abs_set_res(con->imu_input, ABS_Z, NX_CON_IMU_ACCEL_RES_PER_G);
-
-		input_set_abs_params(con->imu_input,
-				     ABS_RX,
-				     -NX_CON_IMU_MAX_GYRO_MAG,
-				     NX_CON_IMU_MAX_GYRO_MAG,
-				     NX_CON_IMU_GYRO_FUZZ,
-				     NX_CON_IMU_GYRO_FLAT);
-		input_set_abs_params(con->imu_input,
-				     ABS_RY,
-				     -NX_CON_IMU_MAX_GYRO_MAG,
-				     NX_CON_IMU_MAX_GYRO_MAG,
-				     NX_CON_IMU_GYRO_FUZZ,
-				     NX_CON_IMU_GYRO_FLAT);
-		input_set_abs_params(con->imu_input,
-				     ABS_RZ,
-				     -NX_CON_IMU_MAX_GYRO_MAG,
-				     NX_CON_IMU_MAX_GYRO_MAG,
-				     NX_CON_IMU_GYRO_FUZZ,
-				     NX_CON_IMU_GYRO_FLAT);
-
-		input_abs_set_res(con->imu_input, ABS_RX, NX_CON_IMU_GYRO_RES_PER_DPS);
-		input_abs_set_res(con->imu_input, ABS_RY, NX_CON_IMU_GYRO_RES_PER_DPS);
-		input_abs_set_res(con->imu_input, ABS_RZ, NX_CON_IMU_GYRO_RES_PER_DPS);
-
-		__set_bit(EV_MSC, con->imu_input->evbit);
-		__set_bit(MSC_TIMESTAMP, con->imu_input->mscbit);
-		__set_bit(INPUT_PROP_ACCELEROMETER, con->imu_input->propbit);
-
-		if ((ret = input_register_device(con->imu_input)))
-			return ret;
-	}
+	if ((ret = input_register_device(con->idev)))
+		return ret;
 
 	return 0;
 }
@@ -2214,7 +2279,9 @@ static int nx_con_leds_create(struct nx_con *con)
 
 	/* configure the player LEDs */
 	for (i = 0; i < NX_CON_NUM_LEDS; i++) {
-		name = devm_kasprintf(dev, GFP_KERNEL, "%s:%s:%s",
+		name = devm_kasprintf(dev,
+				      GFP_KERNEL,
+				      "%s:%s:%s",
 				      d_name,
 				      "green",
 				      nx_con_player_led_names[i]);
@@ -2620,31 +2687,6 @@ static int nintendo_hid_probe(struct hid_device *hdev,
 	con->state = NX_CON_STATE_READ;
 
 	hid_dbg(hdev, "probe - success\n");
-
-	hid_dbg(hdev, "device_is_left_joycon   = %d\n", nx_con_device_is_left_joycon(con));
-	hid_dbg(hdev, "device_is_right_joycon  = %d\n", nx_con_device_is_right_joycon(con));
-	hid_dbg(hdev, "device_is_procon        = %d\n", nx_con_device_is_procon(con));
-	hid_dbg(hdev, "device_is_chrggrip      = %d\n", nx_con_device_is_chrggrip(con));
-	hid_dbg(hdev, "device_is_snescon       = %d\n", nx_con_device_is_snescon(con));
-	hid_dbg(hdev, "device_is_gencon        = %d\n", nx_con_device_is_gencon(con));
-	hid_dbg(hdev, "device_is_n64con        = %d\n", nx_con_device_is_n64con(con));
-	hid_dbg(hdev, "device_is_any_joycon    = %d\n", nx_con_device_is_any_joycon(con));
-	hid_dbg(hdev, "device_has_usb          = %d\n", nx_con_device_has_usb(con));
-	hid_dbg(hdev, "type_is_left_joycon     = %d\n", nx_con_type_is_left_joycon(con));
-	hid_dbg(hdev, "type_is_right_joycon    = %d\n", nx_con_type_is_right_joycon(con));
-	hid_dbg(hdev, "type_is_procon          = %d\n", nx_con_type_is_procon(con));
-	hid_dbg(hdev, "type_is_snescon         = %d\n", nx_con_type_is_snescon(con));
-	hid_dbg(hdev, "type_is_gencon          = %d\n", nx_con_type_is_gencon(con));
-	hid_dbg(hdev, "type_is_n64con          = %d\n", nx_con_type_is_n64con(con));
-	hid_dbg(hdev, "type_is_left_nescon     = %d\n", nx_con_type_is_left_nescon(con));
-	hid_dbg(hdev, "type_is_right_nescon    = %d\n", nx_con_type_is_right_nescon(con));
-	hid_dbg(hdev, "type_has_left_controls  = %d\n", nx_con_type_has_left_controls(con));
-	hid_dbg(hdev, "type_has_right_controls = %d\n", nx_con_type_has_right_controls(con));
-	hid_dbg(hdev, "type_is_any_joycon      = %d\n", nx_con_type_is_any_joycon(con));
-	hid_dbg(hdev, "type_is_any_nescon      = %d\n", nx_con_type_is_any_nescon(con));
-	hid_dbg(hdev, "has_imu                 = %d\n", nx_con_has_imu(con));
-	hid_dbg(hdev, "has_joysticks           = %d\n", nx_con_has_joysticks(con));
-	hid_dbg(hdev, "has_rumble              = %d\n", nx_con_has_rumble(con));
 
 	return 0;
 
