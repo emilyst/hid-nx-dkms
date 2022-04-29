@@ -15,18 +15,33 @@ Source
 Status
 ------
 
-This driver should be considered experimental.
+This driver should be considered **experimental**.
 
-It ought to be stable enough for day-to-day use, and it maintains compatbility for the Nintendo Switch Joy-Cons and Pro Controller. However, its various features, inputs, device names, and so on may still be subject to change.
+It ought to be stable enough for day-to-day use. However, its various features, inputs, device names, and so on may still be subject to change.
 
 
 Supported controllers
 ---------------------
 
-* [SNES controller]
-* [NES controller]
-* [Sega Genesis control pad]
-* [Nintendo 64 controller]
+This driver supports these Nintendo Switch Online controllers:
+
+* [SNES controller] for Nintendo Switch Online
+* [NES Joy-Con controllers] for Nintendo Switch Online
+* [Sega Genesis control pad] for Nintendo Switch Online
+* [Nintendo 64 controller] for Nintendo Switch Online
+
+Note that this does **not** include controllers for the "Classic" consoles released by Nintendo.
+
+This driver also continues to support devices implemented by the original driver:
+
+* Nintendo Switch Joy-Cons (separately, together, or in a charging grip)
+* Nintendo Switch Pro Controller
+
+
+Supported Linux kernel versions
+-------------------------------
+
+This driver should work with Linux kernel versions 5.16 or greater.
 
 
 Installation
@@ -82,13 +97,13 @@ On Arch Linux, instead of installing from source, it is possible to build and in
 Planned
 -------
 
-* NSO N64 controller support (assuming I can ever find one)
 * Refactors to break apart longer functions
 * Possibly rename module to avoid confusion and clarify scope
   * e.g. `hid-nx`
 * Possible ideas from `linux-rt`:
   * Replace kernel spinlocks with mutexes that support priority inheritance
   * Move all interrupt and software interrupts to kernel threads
+* Possibly add more `unlikely` macros to error conditions
 * Amend commits to add `Signed-Off-By` for my own work
 
 
@@ -104,12 +119,6 @@ After that, I extended this support to the Sega Genesis gamepad and [proposed it
 Once I saw there were more changes I wanted to make, I decided to share them as a separate out-of-tree kernel driver instead.
 
 Along with Sega Genesis gamepad support, I've also added support for the Nintendo 64 controller for Nintendo Switch Online.
-
-
-Future
-------
-
-It's likely that in the future I will attempt to rename this driver so as to distinguish it from the in-kernel one. There are also numerous refactors I have in mind.
 
 
 License
@@ -140,7 +149,7 @@ License
 ["History" section]: #history
 [The source code for this driver can be found on GitHub.]: https://github.com/emilyst/hid-nintendo
 [SNES controller]: https://www.nintendo.com/store/products/super-nintendo-entertainment-system-controller/
-[NES controller]: https://www.nintendo.com/store/products/nintendo-entertainment-system-controllers/
+[NES Joy-Con controllers]: https://www.nintendo.com/store/products/nintendo-entertainment-system-controllers/
 [Sega Genesis control pad]: https://www.nintendo.com/store/products/sega-genesis-control-pad/
 [Nintendo 64 controller]: https://www.nintendo.com/store/products/nintendo-64-controller/
 [the DKMS Arch Linux documentation]: https://wiki.archlinux.org/title/Dynamic_Kernel_Module_Support
