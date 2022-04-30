@@ -91,7 +91,15 @@ On Arch Linux, instead of installing from source, it is possible to build and in
 
     makepkg --clean --cleanbuild --syncdeps --install --force
 
-[`joycond`] can be installed [from the Arch Linux User Repository].
+
+Combining Joy-Con devices
+-------------------------
+
+The `hid-nintendo` driver (neither this implementation nor the existing one in the Linux kernel) will present two connected Joy-Con controllers as a single device. A userspace daemon called [`joycond`] provides this functionality. Install it and follow its instructions.
+
+Arch Linux users can install `joycond-git` [from the Arch Linux User Repository].
+
+At this time, [I recommend adding workaround udev rules] to prevent `joycond` from interacting with the NSO controllers.
 
 
 Planned
@@ -155,6 +163,7 @@ License
 [the DKMS Arch Linux documentation]: https://wiki.archlinux.org/title/Dynamic_Kernel_Module_Support
 [`joycond`]: https://github.com/DanielOgorchock/joycond
 [from the Arch Linux User Repository]: https://aur.archlinux.org/packages/joycond-git
+[I recommend adding workaround udev rules]: https://github.com/DanielOgorchock/joycond/pull/54#issuecomment-1114037659
 [from `drivers/hid/hid-nintendo.c` at Linux kernel commit `3e732ebf7316ac83e8562db7e64cc68aec390a18`]: https://github.com/torvalds/linux/blob/3e732
 [His Linux kernel fork can be found on GitHub.]: https://github.com/DanielOgorchock/linux
 [changes from Nadia Holmquist Pedersen to support SNES and NES controllers from Nintendo Switch Online]: https://
