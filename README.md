@@ -47,7 +47,7 @@ This driver should work with Linux kernel versions 5.16 or greater.
 Installation
 ------------
 
-This driver can be installed from source on Linux using DKMS. (If you're installing on Arch Linux, see "Arch Linux package installation" below.)
+This driver can be installed from source on Linux using DKMS. (If you're installing on Arch Linux, see ["Arch Linux package installation"](#arch-linux-package-installation) below.)
 
 Before installation, you should install DKMS support. Depending on which Linux distribution you use, you can run one of the following commands as root or using `sudo`:
 
