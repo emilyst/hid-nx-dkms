@@ -16,20 +16,4 @@ $(OBJ_FILE) $(MODNAME).ko: $(SRC_FILE)
 modules modules_install clean $(OBJ_FILE) $(MODNAME).ko:
 	$(MAKE) -C $(KDIR) M=$(CURDIR) $@
 
-.PHONY: all modules clean install modules_install
-
-load: modules
-	/usr/bin/modprobe ff_memless
-	/sbin/insmod $(MODNAME).ko
-
-unload:
-	/usr/bin/modprobe --remove $(MODNAME)
-	/usr/bin/modprobe --remove ff_memless
-
-reload: modules
-	/usr/bin/modprobe --remove $(MODNAME)
-	/usr/bin/modprobe --remove ff_memless
-	/usr/bin/modprobe ff_memless
-	/sbin/insmod $(MODNAME).ko
-
-.PHONY: load unload reload
+.PHONY: all default install modules modules_install clean
