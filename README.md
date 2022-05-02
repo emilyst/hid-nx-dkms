@@ -1,15 +1,15 @@
-`hid-nintendo` Linux kernel driver with NSO controller support
-==============================================================
+`hid-nintendo` Linux kernel driver for Nintendo Switch controllers
+=================================================================
 
-This repository contains an alternative version of the Linux kernel `hid-nintendo` input driver, modified to add support for Nintendo Switch Online controllers.
+This repository contains an alternative version of the Linux kernel `hid-nintendo` input driver, modified to add support for [Nintendo Switch Online controllers](https://www.nintendo.com/switch/online-service/special-offers/).
 
-For more information about the differences between this and the driver included in the Linux kernel, see the ["History" section] further down.
+For more information about the differences between this and the driver included in the Linux kernel, see the ["History" section](#history) further down.
 
 
 Source
 ------
 
-[The source code for this driver can be found on GitHub.]
+[The source code for this driver can be found on GitHub.](https://github.com/emilyst/hid-nintendo)
 
 
 Status
@@ -25,16 +25,16 @@ Supported controllers
 
 This driver supports these Nintendo Switch Online controllers:
 
-* [SNES controller] for Nintendo Switch Online
-* [NES Joy-Con controllers] for Nintendo Switch Online
-* [Sega Genesis control pad] for Nintendo Switch Online
-* [Nintendo 64 controller] for Nintendo Switch Online
+* [SNES controller for Nintendo Switch Online]: https://www.nintendo.com/store/products/super-nintendo-entertainment-system-controller/
+* [NES Joy-Con controllers for Nintendo Switch Online]: https://www.nintendo.com/store/products/nintendo-entertainment-system-controllers/
+* [Sega Genesis control pad for Nintendo Switch Online]: https://www.nintendo.com/store/products/sega-genesis-control-pad/
+* [Nintendo 64 controller for Nintendo Switch Online]: https://www.nintendo.com/store/products/nintendo-64-controller/
 
 Note that this does **not** include controllers for the "Classic" consoles released by Nintendo.
 
 This driver also continues to support devices implemented by the original driver:
 
-* Nintendo Switch Joy-Cons (separately, together, or in a charging grip)
+* Nintendo Switch Joy-Cons (separately, [together](#combining-joy-con-devices), or in a charging grip)
 * Nintendo Switch Pro Controller
 
 
@@ -47,7 +47,21 @@ This driver should work with Linux kernel versions 5.16 or greater.
 Installation
 ------------
 
-This driver can be installed from source on Linux using DKMS. (If you're installing on Arch Linux, see ["Arch Linux package installation"](#arch-linux-package-installation) below.)
+If you are installing on Arch Linux, this driver [can be built and installed as a package](#arch-linux-package-installation). This is recommended. Otherwise, [see the DKMS installation instructions](#from-source-using-dkms).
+
+
+### As a package on Arch Linux
+
+On Arch Linux, instead of installing from source directly, it is possible to build and install the module as a package. This is helpful because the Pacman packaging system will be aware of it. (Note, though, that even if you install as a package, the [DKMS](https://wiki.archlinux.org/title/Dynamic_Kernel_Module_Support) system is still used to manage the module.)
+
+Run the following command *without* using root permissions. Once the package is built, you will be asked to confirm and authenticate for the package installation.
+
+    makepkg --clean --cleanbuild --syncdeps --force --install
+
+
+### From source using DKMS
+
+To install this driver from source on Linux, use [DKMS](https://github.com/dell/dkms). The process is described below.
 
 Before installation, you should install DKMS support. Depending on which Linux distribution you use, you can run one of the following commands as root or using `sudo`:
 
@@ -68,9 +82,7 @@ Then run the following commands as root or using `sudo`.
 
 Once installed, this driver replaces the native `hid-nintendo` driver. No other configuration should be necessary.
 
-The driver will be rebuilt automatically for every kernel you install in the future. For more information about DKMS, see [the DKMS Arch Linux documentation].
-
-If you want to use two Joy-Cons together as a single input, see [`joycond`].
+DKMS will be responsible for automatically rebuilding the driver for every kernel you install in the future.
 
 
 Uninstallation
@@ -84,22 +96,14 @@ To remove fully, run the following commands as root or using `sudo`.
     rm -rf /usr/src/hid-nintendo-*
 
 
-Arch Linux package installation
--------------------------------
-
-On Arch Linux, instead of installing from source, it is possible to build and install the module as a package. Run the following command *without* using root permissions. You will be asked to confirm the package installation.
-
-    makepkg --clean --cleanbuild --syncdeps --install --force
-
-
 Combining Joy-Con devices
 -------------------------
 
-The `hid-nintendo` driver (neither this implementation nor the existing one in the Linux kernel) will present two connected Joy-Con controllers as a single device. A userspace daemon called [`joycond`] provides this functionality. Install it and follow its instructions.
+The `hid-nintendo` driver (neither this implementation nor the existing one in the Linux kernel) will present two connected Joy-Con controllers as a single device. A userspace daemon called [`joycond`](https://github.com/DanielOgorchock/joycond) provides this functionality. Install it and follow its instructions.
 
-Arch Linux users can install `joycond-git` [from the Arch Linux User Repository].
+Arch Linux users can install [`joycond-git` from the Arch Linux User Repository](https://aur.archlinux.org/packages/joycond-git).
 
-At this time, [I recommend adding workaround udev rules] to prevent `joycond` from interacting with the NSO controllers.
+At this time, [I recommend adding workaround udev rules](99-joycond-ignore.rules) to prevent `joycond` from interacting with the NSO controllers.
 
 
 Planned
@@ -118,11 +122,11 @@ Planned
 History
 -------
 
-This driver was originally taken from the source code [from `drivers/hid/hid-nintendo.c` at Linux kernel commit `3e732ebf7316ac83e8562db7e64cc68aec390a18`]. That driver source was first written by Daniel Ogorchock. [His Linux kernel fork can be found on GitHub.]
+This driver was originally taken from the source code [from `drivers/hid/hid-nintendo.c` at Linux kernel commit `3e732ebf7316ac83e8562db7e64cc68aec390a18`](https://github.com/torvalds/linux/blob/3e732). That driver source was first written by Daniel Ogorchock. [His Linux kernel fork can be found on GitHub.](https://github.com/DanielOgorchock/linux)
 
-I then manually incorporated [changes from Nadia Holmquist Pedersen to support SNES and NES controllers from Nintendo Switch Online].
+I then manually incorporated [changes from Nadia Holmquist Pedersen to support SNES and NES controllers from Nintendo Switch Online](https://github.com/nadiaholmquist/linux/tree/hid-nintendo).
 
-After that, I extended this support to the Sega Genesis gamepad and [proposed it as a change to Daniel's tree].
+After that, I extended this support to the Sega Genesis gamepad and [proposed it as a change to Daniel's tree](https://github.com/DanielOgorchock/linux/pull/35).
 
 Once I saw there were more changes I wanted to make, I decided to share them as a separate out-of-tree kernel driver instead.
 
@@ -152,19 +156,3 @@ License
     along with this program; if not, write to the Free Software
     Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
     02110-1301, USA.
-
-
-["History" section]: #history
-[The source code for this driver can be found on GitHub.]: https://github.com/emilyst/hid-nintendo
-[SNES controller]: https://www.nintendo.com/store/products/super-nintendo-entertainment-system-controller/
-[NES Joy-Con controllers]: https://www.nintendo.com/store/products/nintendo-entertainment-system-controllers/
-[Sega Genesis control pad]: https://www.nintendo.com/store/products/sega-genesis-control-pad/
-[Nintendo 64 controller]: https://www.nintendo.com/store/products/nintendo-64-controller/
-[the DKMS Arch Linux documentation]: https://wiki.archlinux.org/title/Dynamic_Kernel_Module_Support
-[`joycond`]: https://github.com/DanielOgorchock/joycond
-[from the Arch Linux User Repository]: https://aur.archlinux.org/packages/joycond-git
-[I recommend adding workaround udev rules]: https://github.com/DanielOgorchock/joycond/pull/54#issuecomment-1114037659
-[from `drivers/hid/hid-nintendo.c` at Linux kernel commit `3e732ebf7316ac83e8562db7e64cc68aec390a18`]: https://github.com/torvalds/linux/blob/3e732
-[His Linux kernel fork can be found on GitHub.]: https://github.com/DanielOgorchock/linux
-[changes from Nadia Holmquist Pedersen to support SNES and NES controllers from Nintendo Switch Online]: https://
-[proposed it as a change to Daniel's tree]: https://github.com/DanielOgorchock/linux/pull/35
