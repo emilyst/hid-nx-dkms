@@ -1,7 +1,9 @@
-`hid-nx` Linux kernel driver for Nintendo Switch controllers
-=================================================================
+`hid-nx` Linux kernel HID driver for Nintendo Switch controllers
+================================================================
 
-This repository contains an alternative to the the Linux kernel `hid-nintendo` input driver called `hid-nx`. `hid-nx` has been modified to add support for [Nintendo Switch Online controllers](https://www.nintendo.com/switch/online-service/special-offers/).
+This repository contains the source code for a Linux kernel module called `hid-nx`. This module is an [HID](https://en.wikipedia.org/wiki/Human_interface_device) driver for the Nintendo Switch controllers.
+
+The `hid-nx` driver module is meant to be used in place of the in-kernel `hid-nintendo` driver. `hid-nx` provides equivalent functionality and [extends support to the Nintendo Switch Online controllers](#supported-controllers).
 
 For more information about the differences between this and the `hid-nintendo` driver included in the Linux kernel, see the ["History" section](#history) further down.
 
@@ -17,13 +19,20 @@ Status
 
 This driver should be considered **experimental**.
 
-It ought to be stable enough for day-to-day use. However, its various features, inputs, device names, and so on may still be subject to change.
+It ought to be stable enough for day-to-day use. However, its various features, inputs, device names, and so on may still be subject to change. Compared to `hid-nintendo`, `hid-nx` does very slightly change the available inputs for supported controllers.
+
+It is my eventual goal to propose some of these changes to the in-kernel driver, but no proposal is currently in progress.
 
 
 Supported controllers
 ---------------------
 
-This driver supports these Nintendo Switch Online controllers:
+This driver continues to support devices implemented by the original `hid-nintendo` driver:
+
+* Nintendo Switch Joy-Cons (separately, [together](#combining-joy-con-devices), or in a charging grip)
+* Nintendo Switch Pro Controller
+
+This driver also supports these Nintendo Switch Online controllers:
 
 * [SNES controller for Nintendo Switch Online](https://www.nintendo.com/store/products/super-nintendo-entertainment-system-controller/)
 * [NES Joy-Con controllers for Nintendo Switch Online](https://www.nintendo.com/store/products/nintendo-entertainment-system-controllers/)
@@ -32,16 +41,13 @@ This driver supports these Nintendo Switch Online controllers:
 
 Note that this does **not** include controllers for the "Classic" consoles released by Nintendo.
 
-This driver also continues to support devices implemented by the original driver:
-
-* Nintendo Switch Joy-Cons (separately, [together](#combining-joy-con-devices), or in a charging grip)
-* Nintendo Switch Pro Controller
-
 
 Supported Linux kernel versions
 -------------------------------
 
-This driver should work with Linux kernel versions 5.16 or greater.
+This driver should work with Linux kernel versions 5.16 or greater (the same kernel version in which the `hid-nintendo` driver appeared).
+
+It may work on earlier versions, but they are not supported.
 
 
 Installation
@@ -51,7 +57,7 @@ If you are installing on Arch Linux, this driver [can be built and installed as 
 
 Once installed, this driver replaces the native `hid-nintendo` driver. No other configuration should be necessary.
 
-DKMS will be responsible for automatically rebuilding the driver for every kernel you install in the future.
+DKMS will automatically rebuild the driver for every kernel you install in the future.
 
 
 ### As a package on Arch Linux
@@ -76,7 +82,7 @@ Before installation, you should install DKMS support. Depending on which Linux d
 Next, clone the source code.
 
     git clone https://github.com/emilyst/hid-nx-dkms
-    cd hid-nx
+    cd hid-nx-dkms
 
 Then run the following commands as root or using `sudo`.
 
@@ -99,13 +105,14 @@ To remove fully, run the following commands as root or using `sudo`.
 Combining Joy-Con devices
 -------------------------
 
-Neither the `hid-nintendo` driver nor the `hid-nx` driver will present two connected Joy-Con controllers as a single device. A userspace daemon called [`joycond`](https://github.com/DanielOgorchock/joycond) provides this functionality. Install it and follow its instructions.
+Neither the `hid-nintendo` driver nor the `hid-nx` driver will present two connected Joy-Con controllers as a single device on their own. A userspace daemon called [`joycond`](https://github.com/DanielOgorchock/joycond) provides this functionality. Install it and follow its instructions.
 
 Arch Linux users can install [`joycond-git` from the Arch Linux User Repository](https://aur.archlinux.org/packages/joycond-git).
 
-At this time, [I recommend adding workaround udev rules](99-joycond-ignore.rules) to prevent `joycond` from interacting with the NSO controllers. To do so, copy [`99-joycond-ignore.rules`](99-joycond-ignore.rules) to `/etc/udev/rules.d/`. Then run:
+At this time, [I recommend adding workaround udev rules](99-joycond-ignore.rules) to prevent `joycond` from interacting with the NSO controllers. The file [`99-joycond-ignore.rules`](99-joycond-ignore.rules) implements these rules. Run as root:
 
-    sudo udevadm control --reload
+    cp 99-joycond-ignore.rules /etc/udev/rules.d/
+    udevadm control --reload
 
 
 Planned
@@ -132,7 +139,7 @@ Once I saw there were more changes I wanted to make, I decided to share them as 
 
 Along with Sega Genesis gamepad support, I've also added support for the Nintendo 64 controller for Nintendo Switch Online.
 
-I've also renamed the driver to `hid-nx` to avoid confusion with the in-kernel module.
+I've since renamed the driver to `hid-nx` to avoid confusion with the in-kernel module. I am in the process of refactoring and reformatting the source code to make it easier to understand and maintain.
 
 
 License
