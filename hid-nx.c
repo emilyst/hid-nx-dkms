@@ -2542,11 +2542,11 @@ static int nx_hid_probe(struct hid_device *hdev,
 			* inaccurate. Provide a warning, and continue on.
 			*/
 			hid_warn(hdev, "Unable to read IMU calibration data\n");
+		}
 
-			if ((ret = nx_con_enable_imu(con))) {
-				hid_err(hdev, "Failed to enable the IMU; ret=%d\n", ret);
-				goto err_mutex;
-			}
+		if ((ret = nx_con_enable_imu(con))) {
+			hid_err(hdev, "Failed to enable the IMU; ret=%d\n", ret);
+			goto err_mutex;
 		}
 	}
 
