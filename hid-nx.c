@@ -1398,7 +1398,7 @@ static void nx_con_report_imu(struct nx_con *con, struct nx_con_input_report *re
 		 * These calculations (which use the controller's calibration
 		 * settings to improve the final values) are based on those
 		 * found in the community's reverse-engineering repo (linked at
-		 * top of driver). For hid-nintendo, we make sure that the final
+		 * top of driver). For hid-nx, we make sure that the final
 		 * value given to userspace is always in terms of the axis
 		 * resolution we provided.
 		 *
@@ -2415,7 +2415,7 @@ static int nx_con_handle_event(struct nx_con *con, u8 *data, int size)
 	return ret;
 }
 
-static int nintendo_hid_event(struct hid_device *hdev,
+static int nx_hid_event(struct hid_device *hdev,
 			      struct hid_report *report,
 			      u8 *raw_data,
 			      int size)
@@ -2428,7 +2428,7 @@ static int nintendo_hid_event(struct hid_device *hdev,
 	return nx_con_handle_event(con, raw_data, size);
 }
 
-static int nintendo_hid_probe(struct hid_device *hdev,
+static int nx_hid_probe(struct hid_device *hdev,
 			      const struct hid_device_id *id)
 {
 	int ret;
@@ -2449,7 +2449,7 @@ static int nintendo_hid_probe(struct hid_device *hdev,
 	mutex_init(&con->output_mutex);
 	init_waitqueue_head(&con->wait);
 	spin_lock_init(&con->lock);
-	con->rumble_queue = alloc_workqueue("hid-nintendo-rumble_wq",
+	con->rumble_queue = alloc_workqueue("hid-nx-rumble_wq",
 					    WQ_FREEZABLE | WQ_MEM_RECLAIM,
 					    0);
 	if (!con->rumble_queue) {
@@ -2619,7 +2619,7 @@ err:
 	return ret;
 }
 
-static void nintendo_hid_remove(struct hid_device *hdev)
+static void nx_hid_remove(struct hid_device *hdev)
 {
 	struct nx_con *con = hid_get_drvdata(hdev);
 	unsigned long flags;
@@ -2637,7 +2637,7 @@ static void nintendo_hid_remove(struct hid_device *hdev)
 	hid_hw_stop(hdev);
 }
 
-static const struct hid_device_id nintendo_hid_devices[] = {
+static const struct hid_device_id nx_hid_devices[] = {
 	{ HID_USB_DEVICE(USB_VENDOR_ID_NINTENDO, USB_DEVICE_ID_NINTENDO_PROCON)        },
 	{ HID_USB_DEVICE(USB_VENDOR_ID_NINTENDO, USB_DEVICE_ID_NINTENDO_CHRGGRIP)      },
 	{ HID_USB_DEVICE(USB_VENDOR_ID_NINTENDO, USB_DEVICE_ID_NINTENDO_SNESCON)       },
@@ -2652,17 +2652,18 @@ static const struct hid_device_id nintendo_hid_devices[] = {
 	{ HID_BLUETOOTH_DEVICE(USB_VENDOR_ID_NINTENDO, USB_DEVICE_ID_NINTENDO_N64CON)  },
 	{ }
 };
-MODULE_DEVICE_TABLE(hid, nintendo_hid_devices);
+MODULE_DEVICE_TABLE(hid, nx_hid_devices);
 
-static struct hid_driver nintendo_hid_driver = {
-	.name		= "nintendo",
-	.id_table	= nintendo_hid_devices,
-	.probe		= nintendo_hid_probe,
-	.remove		= nintendo_hid_remove,
-	.raw_event	= nintendo_hid_event,
+static struct hid_driver nx_hid_driver = {
+	.name		= "nx",
+	.id_table	= nx_hid_devices,
+	.probe		= nx_hid_probe,
+	.remove		= nx_hid_remove,
+	.raw_event	= nx_hid_event,
 };
-module_hid_driver(nintendo_hid_driver);
+module_hid_driver(nx_hid_driver);
 
 MODULE_LICENSE("GPL");
+MODULE_AUTHOR("Emily Strickland <linux@emily.st>");
 MODULE_AUTHOR("Daniel J. Ogorchock <djogorchock@gmail.com>");
 MODULE_DESCRIPTION("Driver for Nintendo Switch Controllers");

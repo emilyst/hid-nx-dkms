@@ -1,15 +1,15 @@
-`hid-nintendo` Linux kernel driver for Nintendo Switch controllers
+`hid-nx` Linux kernel driver for Nintendo Switch controllers
 =================================================================
 
-This repository contains an alternative version of the Linux kernel `hid-nintendo` input driver, modified to add support for [Nintendo Switch Online controllers](https://www.nintendo.com/switch/online-service/special-offers/).
+This repository contains an alternative to the the Linux kernel `hid-nintendo` input driver called `hid-nx`. `hid-nx` has been modified to add support for [Nintendo Switch Online controllers](https://www.nintendo.com/switch/online-service/special-offers/).
 
-For more information about the differences between this and the driver included in the Linux kernel, see the ["History" section](#history) further down.
+For more information about the differences between this and the `hid-nintendo` driver included in the Linux kernel, see the ["History" section](#history) further down.
 
 
 Source
 ------
 
-[The source code for this driver can be found on GitHub.](https://github.com/emilyst/hid-nintendo)
+[The source code for this driver can be found on GitHub.](https://github.com/emilyst/hid-nx-dkms)
 
 
 Status
@@ -25,10 +25,10 @@ Supported controllers
 
 This driver supports these Nintendo Switch Online controllers:
 
-* [SNES controller for Nintendo Switch Online]: https://www.nintendo.com/store/products/super-nintendo-entertainment-system-controller/
-* [NES Joy-Con controllers for Nintendo Switch Online]: https://www.nintendo.com/store/products/nintendo-entertainment-system-controllers/
-* [Sega Genesis control pad for Nintendo Switch Online]: https://www.nintendo.com/store/products/sega-genesis-control-pad/
-* [Nintendo 64 controller for Nintendo Switch Online]: https://www.nintendo.com/store/products/nintendo-64-controller/
+* [SNES controller for Nintendo Switch Online](https://www.nintendo.com/store/products/super-nintendo-entertainment-system-controller/)
+* [NES Joy-Con controllers for Nintendo Switch Online](https://www.nintendo.com/store/products/nintendo-entertainment-system-controllers/)
+* [Sega Genesis control pad for Nintendo Switch Online](https://www.nintendo.com/store/products/sega-genesis-control-pad/)
+* [Nintendo 64 controller for Nintendo Switch Online](https://www.nintendo.com/store/products/nintendo-64-controller/)
 
 Note that this does **not** include controllers for the "Classic" consoles released by Nintendo.
 
@@ -48,6 +48,10 @@ Installation
 ------------
 
 If you are installing on Arch Linux, this driver [can be built and installed as a package](#arch-linux-package-installation). This is recommended. Otherwise, [see the DKMS installation instructions](#from-source-using-dkms).
+
+Once installed, this driver replaces the native `hid-nintendo` driver. No other configuration should be necessary.
+
+DKMS will be responsible for automatically rebuilding the driver for every kernel you install in the future.
 
 
 ### As a package on Arch Linux
@@ -71,18 +75,14 @@ Before installation, you should install DKMS support. Depending on which Linux d
 
 Next, clone the source code.
 
-    git clone https://github.com/emilyst/hid-nintendo
-    cd hid-nintendo
+    git clone https://github.com/emilyst/hid-nx-dkms
+    cd hid-nx
 
 Then run the following commands as root or using `sudo`.
 
     dkms add .
-    dkms build hid-nintendo -v 1.10
-    dkms install hid-nintendo -v 1.10
-
-Once installed, this driver replaces the native `hid-nintendo` driver. No other configuration should be necessary.
-
-DKMS will be responsible for automatically rebuilding the driver for every kernel you install in the future.
+    dkms build hid-nx -v 1.11
+    dkms install hid-nx -v 1.11
 
 
 Uninstallation
@@ -90,28 +90,28 @@ Uninstallation
 
 To remove fully, run the following commands as root or using `sudo`.
 
-    modprobe -r hid_nintendo
-    dkms uninstall -m hid-nintendo -v 1.10
-    dkms remove -m hid-nintendo -v 1.10
-    rm -rf /usr/src/hid-nintendo-*
+    modprobe -r hid_nx
+    dkms uninstall -m hid-nx -v 1.11
+    dkms remove -m hid-nx -v 1.11
+    rm -rf /usr/src/hid-nx-*
 
 
 Combining Joy-Con devices
 -------------------------
 
-The `hid-nintendo` driver (neither this implementation nor the existing one in the Linux kernel) will present two connected Joy-Con controllers as a single device. A userspace daemon called [`joycond`](https://github.com/DanielOgorchock/joycond) provides this functionality. Install it and follow its instructions.
+Neither the `hid-nintendo` driver nor the `hid-nx` driver will present two connected Joy-Con controllers as a single device. A userspace daemon called [`joycond`](https://github.com/DanielOgorchock/joycond) provides this functionality. Install it and follow its instructions.
 
 Arch Linux users can install [`joycond-git` from the Arch Linux User Repository](https://aur.archlinux.org/packages/joycond-git).
 
-At this time, [I recommend adding workaround udev rules](99-joycond-ignore.rules) to prevent `joycond` from interacting with the NSO controllers.
+At this time, [I recommend adding workaround udev rules](99-joycond-ignore.rules) to prevent `joycond` from interacting with the NSO controllers. To do so, copy [`99-joycond-ignore.rules`](99-joycond-ignore.rules) to `/etc/udev/rules.d/`. Then run:
+
+    sudo udevadm control --reload
 
 
 Planned
 -------
 
 * Refactors to break apart longer functions
-* Possibly rename module to avoid confusion and clarify scope
-  * e.g. `hid-nx`
 * Possible ideas from `linux-rt`:
   * Replace kernel spinlocks with mutexes that support priority inheritance
   * Move all interrupt and software interrupts to kernel threads
@@ -131,6 +131,8 @@ After that, I extended this support to the Sega Genesis gamepad and [proposed it
 Once I saw there were more changes I wanted to make, I decided to share them as a separate out-of-tree kernel driver instead.
 
 Along with Sega Genesis gamepad support, I've also added support for the Nintendo 64 controller for Nintendo Switch Online.
+
+I've also renamed the driver to `hid-nx` to avoid confusion with the in-kernel module.
 
 
 License

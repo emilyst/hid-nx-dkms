@@ -1,4 +1,4 @@
-obj-m += hid-nintendo.o
+obj-m += hid-nx.o
 
 KERNEL_RELEASE := $(shell uname -r)
 KDIR           := /lib/modules/$(KERNEL_RELEASE)/build
