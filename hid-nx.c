@@ -542,6 +542,15 @@ struct nx_con_input_report {
 
 static const unsigned short NX_CON_RUMBLE_ZERO_AMP_PKT_CNT = 5;
 
+/* for compat with kernels before 5.16 */
+#ifndef LED_FUNCTION_PLAYER1
+#define LED_FUNCTION_PLAYER1 "player-1"
+#define LED_FUNCTION_PLAYER2 "player-2"
+#define LED_FUNCTION_PLAYER3 "player-3"
+#define LED_FUNCTION_PLAYER4 "player-4"
+#define LED_FUNCTION_PLAYER5 "player-5"
+#endif
+
 static const char * nx_con_player_led_names[] = {
 	LED_FUNCTION_PLAYER1,
 	LED_FUNCTION_PLAYER2,
