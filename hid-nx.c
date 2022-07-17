@@ -781,11 +781,6 @@ static inline bool nx_con_has_rumble(struct nx_con *con)
 	       nx_con_type_is_n64con(con);
 }
 
-static inline bool nx_con_connected_via_usb(struct nx_con *con)
-{
-	return con->hdev->bus == BUS_USB;
-}
-
 static int __nx_con_hid_send(struct hid_device *hdev, u8 *data, size_t len)
 {
 	u8 *buf;
@@ -1938,7 +1933,7 @@ static void nx_con_config_rumble(struct nx_con *con)
 #endif
 }
 
-static int nx_con_imu_create(struct nx_con *con)
+static int nx_con_imu_idev_create(struct nx_con *con)
 {
 	struct hid_device *hdev;
 	const char *imu_name;
@@ -2019,7 +2014,7 @@ static int nx_con_imu_create(struct nx_con *con)
 	return 0;
 }
 
-static int nx_con_input_create(struct nx_con *con)
+static int nx_con_idev_create(struct nx_con *con)
 {
 	struct hid_device *hdev;
 	int ret;
@@ -2068,7 +2063,7 @@ static int nx_con_input_create(struct nx_con *con)
 		nx_con_config_buttons(con->idev, n64con_button_mappings);
 	}
 
-	if (nx_con_has_imu(con) && (ret = nx_con_imu_create(con)))
+	if (nx_con_has_imu(con) && (ret = nx_con_imu_idev_create(con)))
 		return ret;
 
 	if (nx_con_has_rumble(con))
@@ -2416,9 +2411,9 @@ static int nx_con_handle_event(struct nx_con *con, u8 *data, int size)
 }
 
 static int nx_hid_event(struct hid_device *hdev,
-			      struct hid_report *report,
-			      u8 *raw_data,
-			      int size)
+			struct hid_report *report,
+			u8 *raw_data,
+			int size)
 {
 	struct nx_con *con = hid_get_drvdata(hdev);
 
@@ -2428,8 +2423,81 @@ static int nx_hid_event(struct hid_device *hdev,
 	return nx_con_handle_event(con, raw_data, size);
 }
 
+static int nx_con_init_rumble_worker(struct nx_con *con)
+{
+	if (!(con->rumble_queue = alloc_workqueue("hid-nx-rumble_wq",
+					          WQ_FREEZABLE | WQ_MEM_RECLAIM,
+					          0)))
+		return -ENOMEM;
+
+	INIT_WORK(&con->rumble_worker, nx_con_rumble_worker);
+
+	return 0;
+}
+
+static inline bool nx_con_using_usb(struct nx_con *con)
+{
+	return con->hdev->bus == BUS_USB;
+}
+
+static int nx_con_usb_handshake(struct nx_con *con)
+{
+	int ret;
+
+	hid_dbg(con->hdev, "setting USB baud rate\n");
+
+	if ((ret = nx_con_send_usb(con, NX_CON_USB_CMD_BAUDRATE_3M, HZ))) {
+		hid_err(con->hdev, "Failed to set baudrate; ret=%d\n", ret);
+		return ret;
+	}
+
+	hid_dbg(con->hdev, "sending USB handshake\n");
+	
+	if ((ret = nx_con_send_usb(con, NX_CON_USB_CMD_HANDSHAKE, HZ))) {
+		hid_err(con->hdev, "Failed handshake; ret=%d\n", ret);
+		return ret;
+	}
+
+	/*
+	 * Set no timeout (to keep controller in USB mode).
+	 * This doesn't send a response, so ignore the timeout.
+	 */
+	hid_dbg(con->hdev, "disabling USB timeout\n");
+	nx_con_send_usb(con, NX_CON_USB_CMD_NO_TIMEOUT, HZ/10);
+
+	return 0;
+}
+
+static void nx_con_probe_hid_dbg_device(struct nx_con *con)
+{
+	hid_dbg(con->hdev, "device_is_left_joycon    = %d\n", nx_con_device_is_left_joycon(con));
+ 	hid_dbg(con->hdev, "device_is_right_joycon   = %d\n", nx_con_device_is_right_joycon(con));
+ 	hid_dbg(con->hdev, "device_is_procon         = %d\n", nx_con_device_is_procon(con));
+ 	hid_dbg(con->hdev, "device_is_chrggrip       = %d\n", nx_con_device_is_chrggrip(con));
+ 	hid_dbg(con->hdev, "device_is_snescon        = %d\n", nx_con_device_is_snescon(con));
+ 	hid_dbg(con->hdev, "device_is_gencon         = %d\n", nx_con_device_is_gencon(con));
+ 	hid_dbg(con->hdev, "device_is_n64con         = %d\n", nx_con_device_is_n64con(con));
+ 	hid_dbg(con->hdev, "device_has_usb           = %d\n", nx_con_device_has_usb(con));
+ 	hid_dbg(con->hdev, "type_is_left_joycon      = %d\n", nx_con_type_is_left_joycon(con));
+ 	hid_dbg(con->hdev, "type_is_right_joycon     = %d\n", nx_con_type_is_right_joycon(con));
+ 	hid_dbg(con->hdev, "type_is_procon           = %d\n", nx_con_type_is_procon(con));
+ 	hid_dbg(con->hdev, "type_is_snescon          = %d\n", nx_con_type_is_snescon(con));
+ 	hid_dbg(con->hdev, "type_is_gencon           = %d\n", nx_con_type_is_gencon(con));
+ 	hid_dbg(con->hdev, "type_is_n64con           = %d\n", nx_con_type_is_n64con(con));
+ 	hid_dbg(con->hdev, "type_is_left_nescon      = %d\n", nx_con_type_is_left_nescon(con));
+ 	hid_dbg(con->hdev, "type_is_right_nescon     = %d\n", nx_con_type_is_right_nescon(con));
+ 	hid_dbg(con->hdev, "type_has_left_controls   = %d\n", nx_con_type_has_left_controls(con));
+ 	hid_dbg(con->hdev, "type_has_right_controls  = %d\n", nx_con_type_has_right_controls(con));
+ 	hid_dbg(con->hdev, "type_is_any_joycon       = %d\n", nx_con_type_is_any_joycon(con));
+ 	hid_dbg(con->hdev, "type_is_any_nescon       = %d\n", nx_con_type_is_any_nescon(con));
+ 	hid_dbg(con->hdev, "has_imu                  = %d\n", nx_con_has_imu(con));
+ 	hid_dbg(con->hdev, "has_joysticks            = %d\n", nx_con_has_joysticks(con));
+ 	hid_dbg(con->hdev, "has_rumble               = %d\n", nx_con_has_rumble(con));
+	hid_dbg(con->hdev, "using_usb                = %d\n", nx_con_using_usb(con));
+}
+
 static int nx_hid_probe(struct hid_device *hdev,
-			      const struct hid_device_id *id)
+			const struct hid_device_id *id)
 {
 	int ret;
 	struct nx_con *con;
@@ -2449,14 +2517,11 @@ static int nx_hid_probe(struct hid_device *hdev,
 	mutex_init(&con->output_mutex);
 	init_waitqueue_head(&con->wait);
 	spin_lock_init(&con->lock);
-	con->rumble_queue = alloc_workqueue("hid-nx-rumble_wq",
-					    WQ_FREEZABLE | WQ_MEM_RECLAIM,
-					    0);
-	if (!con->rumble_queue) {
-		ret = -ENOMEM;
-		goto err;
+
+	if ((ret = nx_con_init_rumble_worker(con))) {
+		hid_err(hdev, "Failed to initialize rumble worker/queue\n");
+		goto err_wq;
 	}
-	INIT_WORK(&con->rumble_worker, nx_con_rumble_worker);
 
 	if ((ret = hid_parse(hdev))) {
 		hid_err(hdev, "HID parse failed\n");
@@ -2484,35 +2549,10 @@ static int nx_hid_probe(struct hid_device *hdev,
 
 	hid_device_io_start(hdev);
 
-	/* Initialize the controller */
 	mutex_lock(&con->output_mutex);
 
-	if (nx_con_connected_via_usb(con)) {
-		hid_dbg(hdev, "detected USB controller\n");
-
-		hid_dbg(hdev, "setting USB baud rate\n");
-		if ((ret = nx_con_send_usb(con, NX_CON_USB_CMD_BAUDRATE_3M, HZ))) {
-			hid_err(hdev, "Failed to set baudrate; ret=%d\n", ret);
-			goto err_mutex;
-		}
-
-		hid_dbg(hdev, "sending USB handshake\n");
-		if ((ret = nx_con_send_usb(con, NX_CON_USB_CMD_HANDSHAKE, HZ))) {
-			hid_err(hdev, "Failed handshake; ret=%d\n", ret);
-			goto err_mutex;
-		}
-
-		/*
-		 * Set no timeout (to keep controller in USB mode).
-		 * This doesn't send a response, so ignore the timeout.
-		 */
-		hid_dbg(hdev, "disabling USB timeout\n");
-		nx_con_send_usb(con, NX_CON_USB_CMD_NO_TIMEOUT, HZ/10);
-	} else if (nx_con_device_is_chrggrip(con)) {
-		hid_err(hdev, "Failed charging grip handshake\n");
-		ret = -ETIMEDOUT;
+	if (nx_con_using_usb(con) && (ret = nx_con_usb_handshake(con)))
 		goto err_mutex;
-	}
 
 	if ((ret = nx_con_set_report_mode(con))) {
 		hid_err(hdev, "Failed to set report mode; ret=%d\n", ret);
@@ -2570,39 +2610,15 @@ static int nx_hid_probe(struct hid_device *hdev,
 		goto err_close;
 	}
 
-	if ((ret = nx_con_input_create(con))) {
+	if ((ret = nx_con_idev_create(con))) {
 		hid_err(hdev, "Failed to create input device; ret=%d\n", ret);
 		goto err_close;
 	}
 
 	con->state = NX_CON_STATE_READ;
 
+	nx_con_probe_hid_dbg_device(con);
 	hid_dbg(hdev, "probe - success\n");
-
-	hid_dbg(hdev, "device_is_left_joycon    = %d\n", nx_con_device_is_left_joycon(con));
- 	hid_dbg(hdev, "device_is_right_joycon   = %d\n", nx_con_device_is_right_joycon(con));
- 	hid_dbg(hdev, "device_is_procon         = %d\n", nx_con_device_is_procon(con));
- 	hid_dbg(hdev, "device_is_chrggrip       = %d\n", nx_con_device_is_chrggrip(con));
- 	hid_dbg(hdev, "device_is_snescon        = %d\n", nx_con_device_is_snescon(con));
- 	hid_dbg(hdev, "device_is_gencon         = %d\n", nx_con_device_is_gencon(con));
- 	hid_dbg(hdev, "device_is_n64con         = %d\n", nx_con_device_is_n64con(con));
- 	hid_dbg(hdev, "device_has_usb           = %d\n", nx_con_device_has_usb(con));
- 	hid_dbg(hdev, "type_is_left_joycon      = %d\n", nx_con_type_is_left_joycon(con));
- 	hid_dbg(hdev, "type_is_right_joycon     = %d\n", nx_con_type_is_right_joycon(con));
- 	hid_dbg(hdev, "type_is_procon           = %d\n", nx_con_type_is_procon(con));
- 	hid_dbg(hdev, "type_is_snescon          = %d\n", nx_con_type_is_snescon(con));
- 	hid_dbg(hdev, "type_is_gencon           = %d\n", nx_con_type_is_gencon(con));
- 	hid_dbg(hdev, "type_is_n64con           = %d\n", nx_con_type_is_n64con(con));
- 	hid_dbg(hdev, "type_is_left_nescon      = %d\n", nx_con_type_is_left_nescon(con));
- 	hid_dbg(hdev, "type_is_right_nescon     = %d\n", nx_con_type_is_right_nescon(con));
- 	hid_dbg(hdev, "type_has_left_controls   = %d\n", nx_con_type_has_left_controls(con));
- 	hid_dbg(hdev, "type_has_right_controls  = %d\n", nx_con_type_has_right_controls(con));
- 	hid_dbg(hdev, "type_is_any_joycon       = %d\n", nx_con_type_is_any_joycon(con));
- 	hid_dbg(hdev, "type_is_any_nescon       = %d\n", nx_con_type_is_any_nescon(con));
- 	hid_dbg(hdev, "has_imu                  = %d\n", nx_con_has_imu(con));
- 	hid_dbg(hdev, "has_joysticks            = %d\n", nx_con_has_joysticks(con));
- 	hid_dbg(hdev, "has_rumble               = %d\n", nx_con_has_rumble(con));
-	hid_dbg(hdev, "nx_con_connected_via_usb = %d\n", nx_con_connected_via_usb(con));
 
 	return 0;
 
