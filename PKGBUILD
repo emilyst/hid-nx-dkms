@@ -2,7 +2,7 @@
 
 _pkgbase=hid-nx
 pkgname=${_pkgbase}-dkms
-pkgver=v1.11
+pkgver=v1.12
 pkgrel=1
 pkgdesc='Nintendo Switch controller driver with NSO controller support'
 arch=(any)
@@ -28,9 +28,9 @@ source=(
 )
 noextract=()
 sha256sums=('8d4551038e60b39d4080287ff4578c50eedfa3ae33d2edc70c5e92223f229c0f'
-            'bc5473caab898257803704df3bacf25660ae8a707a3952f5e192c68caa2dea5e'
+            '1f74bee099700954b376f8737e0d3f29e0845bf33882538358da67fff46be21f'
             '57b90c41ea41d68cf874ea2f4db0b1612ed9ba60071d99a81c4a3e7e3cbeee6b'
-            '487723a21ccf9c116b3cad6c51f769301165b844a88e3d2b319e174b5488695e'
+            '66695d7d6b36c7fdd301537fdd2fc5a14f5b4288e2264a6e73ca5b45806f3f4a'
             '0f3c1f56a3e8b4f3dccc6ce10b1ce480a94270cf90a239c94fec3dcb0280444d')
 
 package() {

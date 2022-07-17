@@ -87,8 +87,8 @@ Next, clone the source code.
 Then run the following commands as root or using `sudo`.
 
     dkms add .
-    dkms build hid-nx -v 1.11
-    dkms install hid-nx -v 1.11
+    dkms build hid-nx -v 1.12
+    dkms install hid-nx -v 1.12
 
 
 Uninstallation
@@ -97,8 +97,8 @@ Uninstallation
 To remove fully, run the following commands as root or using `sudo`.
 
     modprobe -r hid_nx
-    dkms uninstall -m hid-nx -v 1.11
-    dkms remove -m hid-nx -v 1.11
+    dkms uninstall -m hid-nx -v 1.12
+    dkms remove -m hid-nx -v 1.12
     rm -rf /usr/src/hid-nx-*
 
 
