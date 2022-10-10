@@ -1029,17 +1029,32 @@ static int nx_con_read_stick_calibration(struct nx_con *con,
 		y_max_above = hid_field_extract(con->hdev, (raw + 7), 4, 12);
 	}
 
-	cal_x->max = cal_x->center + x_max_above;
-	cal_x->min = cal_x->center - x_min_below;
-	cal_y->max = cal_y->center + y_max_above;
-	cal_y->min = cal_y->center - y_min_below;
+	/* check if calibration values are plausible */
+	if (cal_x->min >= cal_x->center || 
+	    cal_x->center >= cal_x->max ||
+	    cal_y->min >= cal_y->center ||
+	    cal_y->center >= cal_y->max)
+		ret = -EINVAL;
 
-	return 0;
+	return ret;
 }
 
 static const u16 DFLT_STICK_CAL_CEN = 2000;
 static const u16 DFLT_STICK_CAL_MAX = 3500;
 static const u16 DFLT_STICK_CAL_MIN = 500;
+
+static void nx_con_use_default_calibration(struct hid_device *hdev,
+					   struct nx_con_stick_cal *cal_x,
+					   struct nx_con_stick_cal *cal_y,
+					   const char *stick,
+					   int ret)
+{
+	hid_warn(hdev, "Failed to read %s stick cal, using defaults; e=%d\n", stick, ret);
+
+	cal_x->center = cal_y->center = DFLT_STICK_CAL_CEN;
+	cal_x->max = cal_y->max = DFLT_STICK_CAL_MAX;
+	cal_x->min = cal_y->min = DFLT_STICK_CAL_MIN;
+}
 
 static int nx_con_request_calibration(struct nx_con *con)
 {
@@ -1068,17 +1083,11 @@ static int nx_con_request_calibration(struct nx_con *con)
 					     	 &con->left_stick_cal_x,
 					     	 &con->left_stick_cal_y,
 					     	 true))) {
-		hid_warn(con->hdev,
-			 "Failed to read left stick cal, using dflts; e=%d\n",
-			 ret);
-
-		con->left_stick_cal_x.center = DFLT_STICK_CAL_CEN;
-		con->left_stick_cal_x.max = DFLT_STICK_CAL_MAX;
-		con->left_stick_cal_x.min = DFLT_STICK_CAL_MIN;
-
-		con->left_stick_cal_y.center = DFLT_STICK_CAL_CEN;
-		con->left_stick_cal_y.max = DFLT_STICK_CAL_MAX;
-		con->left_stick_cal_y.min = DFLT_STICK_CAL_MIN;
+		nx_con_use_default_calibration(con->hdev,
+					       &con->left_stick_cal_x,
+					       &con->left_stick_cal_y,
+					       "left",
+					       ret);
 	}
 
 	if ((ret = nx_con_read_stick_calibration(con,
@@ -1086,15 +1095,11 @@ static int nx_con_request_calibration(struct nx_con *con)
 						 &con->right_stick_cal_x,
 					         &con->right_stick_cal_y,
 					         false))) {
-		hid_warn(con->hdev, "Failed to read right stick cal, using dflts; e=%d\n", ret);
-
-		con->right_stick_cal_x.center = DFLT_STICK_CAL_CEN;
-		con->right_stick_cal_x.max = DFLT_STICK_CAL_MAX;
-		con->right_stick_cal_x.min = DFLT_STICK_CAL_MIN;
-
-		con->right_stick_cal_y.center = DFLT_STICK_CAL_CEN;
-		con->right_stick_cal_y.max = DFLT_STICK_CAL_MAX;
-		con->right_stick_cal_y.min = DFLT_STICK_CAL_MIN;
+		nx_con_use_default_calibration(con->hdev,
+					       &con->right_stick_cal_x,
+					       &con->right_stick_cal_y,
+					       "right",
+					       ret);
 	}
 
 	hid_dbg(con->hdev, "calibration:\n"
