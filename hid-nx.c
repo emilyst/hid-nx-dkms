@@ -2226,10 +2226,11 @@ static int nx_con_leds_create(struct nx_con *con)
 			hid_err(hdev, "Failed registering home led\n");
 			return ret;
 		}
+
 		/* Set the home LED to 0 as default state */
 		if ((ret = nx_con_home_led_brightness_set(led, 0))) {
-			hid_err(hdev, "Failed to set home LED dflt; ret=%d\n", ret);
-			return ret;
+			hid_warn(hdev, "Failed to set home LED default, unregistering home LED");
+			devm_led_classdev_unregister(&hdev->dev, led);
 		}
 	}
 
