@@ -19,7 +19,7 @@ Status
 
 This driver should be considered **experimental**.
 
-It ought to be stable enough for day-to-day use. However, its various features, inputs, device names, and so on may still be subject to change. Compared to `hid-nintendo`, `hid-nx` does very slightly change the available inputs for supported controllers.
+It ought to be stable enough for day-to-day use. However, its supported features, input mappings, device names, and so on may still be subject to change. Please read this document carefully if you experience any issues.
 
 It is my eventual goal to propose some of these changes to the in-kernel driver, but no proposal is currently in progress.
 
@@ -39,7 +39,14 @@ This driver also supports these Nintendo Switch Online controllers:
 * [Sega Genesis control pad for Nintendo Switch Online](https://www.nintendo.com/store/products/sega-genesis-control-pad/)
 * [Nintendo 64 controller for Nintendo Switch Online](https://www.nintendo.com/store/products/nintendo-64-controller/)
 
-Note that this does **not** include controllers for the "Classic" consoles released by Nintendo.
+This does **not** include controllers for the "Classic" consoles released by Nintendo.
+
+> **Note**: Compared to `hid-nintendo`, devices using the `hid-nx` driver module will have the following different behaviors:
+>
+> * Input mappings: During refactoring to more easily accommodate adding new device inputs, I rearranged the ordering and mapping of some inputs for existing controllers for consistency.
+> * Device names: Rather than hard-code names per device, as in the mainline driver, I allow each device to report its own name on connection. This means the device's name differs slightly in some cases, as seen in programs like GNOME's Bluetooth settings, or RetroArch.
+>   * Unfortunately, RetroArch configures controllers by device name, and this means some controllers will no longer be automatically configured by RetroArch when using this driver. I hope in the future to supply useful autoconfiguration files for use, but in the meantime, you will need to configure those controllers' inputs manually.
+>   * This should not impact Joy-Cons, use of `joycond`, etc.
 
 
 Supported Linux kernel versions
