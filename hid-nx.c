@@ -881,7 +881,7 @@ static int nx_con_hid_send_sync(struct nx_con *con, u8 *data, size_t len, u32 ti
 static int nx_con_send_usb(struct nx_con *con, u8 cmd, u32 timeout)
 {
 	int ret;
-	u8 buf[2] = {NX_CON_OUTPUT_USB_CMD};
+	u8 buf[64] = {NX_CON_OUTPUT_USB_CMD};
 
 	buf[1] = cmd;
 	con->usb_ack_match = cmd;
