@@ -28,7 +28,12 @@
  */
 
 #include "hid-ids.h"
+#include <linux/version.h>
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 12, 0)
+#include <linux/unaligned.h>
+#else
 #include <asm/unaligned.h>
+#endif
 #include <linux/delay.h>
 #include <linux/device.h>
 #include <linux/kernel.h>
@@ -1030,7 +1035,7 @@ static int nx_con_read_stick_calibration(struct nx_con *con,
 	}
 
 	/* check if calibration values are plausible */
-	if (cal_x->min >= cal_x->center || 
+	if (cal_x->min >= cal_x->center ||
 	    cal_x->center >= cal_x->max ||
 	    cal_y->min >= cal_y->center ||
 	    cal_y->center >= cal_y->max)
@@ -2467,7 +2472,7 @@ static int nx_con_usb_handshake(struct nx_con *con)
 	}
 
 	hid_dbg(con->hdev, "sending USB handshake\n");
-	
+
 	if ((ret = nx_con_send_usb(con, NX_CON_USB_CMD_HANDSHAKE, HZ))) {
 		hid_err(con->hdev, "Failed handshake; ret=%d\n", ret);
 		return ret;
