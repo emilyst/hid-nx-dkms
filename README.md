@@ -1,3 +1,8 @@
+> [!WARNING]
+> As of 2025, **work has been discontinued** on this module. It should be considered abandoned now.
+>
+> If you use Linux kernel version 6.7 or later, you should already have this functionality. **There is no need for this driver module.**
+
 `hid-nx` Linux kernel HID driver for Nintendo Switch controllers
 ================================================================
 
