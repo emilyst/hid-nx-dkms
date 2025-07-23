@@ -371,7 +371,7 @@ static const struct nx_con_button_mapping left_joycon_button_mappings[] = {
 	{ BTN_DPAD_DOWN,	NX_CON_BTN_DOWN,	},
 	{ BTN_DPAD_LEFT,	NX_CON_BTN_LEFT,	},
 	{ BTN_DPAD_RIGHT,	NX_CON_BTN_RIGHT,	},
-	{ BTN_1,		NX_CON_BTN_CAP,		},
+	{ BTN_MODE,		NX_CON_BTN_CAP,		},
 	{ /* sentinel */ },
 };
 
@@ -394,7 +394,7 @@ static const struct nx_con_button_mapping right_joycon_button_mappings[] = {
 	{ BTN_TR2,	NX_CON_BTN_ZR,		},
 	{ BTN_START,	NX_CON_BTN_PLUS,	},
 	{ BTN_THUMBR,	NX_CON_BTN_RSTICK,	},
-	{ BTN_0,	NX_CON_BTN_HOME,	},
+	{ BTN_DIGI,	NX_CON_BTN_HOME,	},
 	{ /* sentinel */ },
 };
 
@@ -421,8 +421,8 @@ static const struct nx_con_button_mapping procon_button_mappings[] = {
 	{ BTN_START,	NX_CON_BTN_PLUS,	},
 	{ BTN_THUMBL,	NX_CON_BTN_LSTICK,	},
 	{ BTN_THUMBR,	NX_CON_BTN_RSTICK,	},
-	{ BTN_0,	NX_CON_BTN_HOME,	},
-	{ BTN_1,	NX_CON_BTN_CAP,		},
+	{ BTN_DIGI,	NX_CON_BTN_HOME,	},
+	{ BTN_MODE,	NX_CON_BTN_CAP,		},
 	{ /* sentinel */ },
 };
 
@@ -458,10 +458,13 @@ static const struct nx_con_button_mapping gencon_button_mappings[] = {
 	{ BTN_SOUTH,	NX_CON_BTN_A,		},
 	{ BTN_EAST,	NX_CON_BTN_B,		},
 	{ BTN_WEST,	NX_CON_BTN_R,		},
-	{ BTN_SELECT,	NX_CON_BTN_ZR,		},
+	{ BTN_DPAD_LEFT,	NX_CON_BTN_X,		},
+	{ BTN_DPAD_UP,		NX_CON_BTN_Y,		},
+	{ BTN_DPAD_RIGHT,	NX_CON_BTN_L,		},
+	{ BTN_THUMBL,	NX_CON_BTN_ZR,		},
 	{ BTN_START,	NX_CON_BTN_PLUS,	},
-	{ BTN_0,	NX_CON_BTN_HOME,	},
-	{ BTN_1,	NX_CON_BTN_CAP,		},
+	{ BTN_SELECT,	NX_CON_BTN_HOME,	},
+	{ BTN_MODE,	NX_CON_BTN_CAP,		},
 	{ /* sentinel */ },
 };
 
@@ -480,8 +483,8 @@ static const struct nx_con_button_mapping n64con_button_mappings[] = {
 	{ BTN_DPAD_DOWN,	NX_CON_BTN_ZR,		},
 	{ BTN_DPAD_LEFT,	NX_CON_BTN_X,		},
 	{ BTN_DPAD_RIGHT,	NX_CON_BTN_MINUS,	},
-	{ BTN_0,		NX_CON_BTN_HOME,	},
-	{ BTN_1,		NX_CON_BTN_CAP,		},
+	{ BTN_THUMBL,		NX_CON_BTN_HOME,	},
+	{ BTN_MODE,		NX_CON_BTN_CAP,		},
 	{ /* sentinel */ },
 };
 
