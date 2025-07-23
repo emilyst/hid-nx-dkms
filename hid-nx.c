@@ -1029,6 +1029,12 @@ static int nx_con_read_stick_calibration(struct nx_con *con,
 		y_max_above = hid_field_extract(con->hdev, (raw + 7), 4, 12);
 	}
 
+	/* SPI min/max calibration is relative to center */
+	cal_x->max = cal_x->center + x_max_above;
+	cal_x->min = cal_x->center - x_min_below;
+	cal_y->max = cal_y->center + y_max_above;
+	cal_y->min = cal_y->center - y_min_below;
+
 	/* check if calibration values are plausible */
 	if (cal_x->min >= cal_x->center || 
 	    cal_x->center >= cal_x->max ||
